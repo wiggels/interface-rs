@@ -1,11 +1,15 @@
 [package]
 name = "interface-rs"
-version = "0.0.1"
+version = "0.1.0"
 authors = ["Hunter Wigelsworth <wiggels@gmail.com>"]
 edition = "2021"
 description = "Library for reading and writing Linux interfaces(5) files"
 homepage = "https://interface-rs.com"
 repository = "https://github.com/wiggels/interface-rs"
 license = "MIT"
+keywords = ["network", "interfaces", "linux", "configuration"]
+categories = ["network-programming", "configuration"]
+readme = "README.md"
+documentation = "https://docs.rs/interface-rs"
 
 [dependencies]
