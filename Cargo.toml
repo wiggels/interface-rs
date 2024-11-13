@@ -8,7 +8,7 @@ homepage = "https://interface-rs.com"
 repository = "https://github.com/wiggels/interface-rs"
 license = "MIT"
 keywords = ["network", "interfaces", "linux", "configuration"]
-categories = ["network-programming", "configuration"]
+categories = ["network-programming", "parser-implementations"]
 documentation = "https://docs.rs/interface-rs"
 
 [dependencies]
