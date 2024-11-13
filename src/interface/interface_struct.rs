@@ -1,5 +1,5 @@
-use super::{Family, Mapping};
-use std::fmt;
+use super::{Family, InterfaceBuilder, Mapping};
+use std::{collections::HashMap, fmt};
 
 /// Represents a network interface configuration in an `interfaces(5)` file.
 ///
@@ -8,22 +8,23 @@ use std::fmt;
 /// allowed hotplug options, address family, method of configuration, and
 /// additional options.
 ///
+/// To construct an `Interface`, it is recommended to use the [`InterfaceBuilder`]
+/// via the [`Interface::builder`] method for a more ergonomic and fluent API.
+///
 /// # Examples
 ///
-/// Creating a new `Interface`:
+/// Creating a new `Interface` using the builder pattern:
 ///
 /// ```rust
 /// use interface_rs::interface::{Interface, Family};
 ///
-/// let iface = Interface {
-///     name: "eth0".to_string(),
-///     auto: true,
-///     allow: vec!["hotplug".to_string()],
-///     family: Some(Family::Inet),
-///     method: Some("dhcp".to_string()),
-///     options: vec![],
-///     mapping: None,
-/// };
+/// let iface = Interface::builder("eth0")
+///     .with_auto(true)
+///     .with_allow("hotplug")
+///     .with_family(Family::Inet)
+///     .with_method("dhcp")
+///     .with_option("mtu", "1500")
+///     .build();
 /// ```
 #[derive(Debug, Clone)]
 pub struct Interface {
@@ -41,6 +42,58 @@ pub struct Interface {
     pub options: Vec<(String, String)>,
     /// Optional mapping configuration for the interface.
     pub mapping: Option<Mapping>,
+}
+
+impl Interface {
+    /// Creates a new [`InterfaceBuilder`] for constructing an `Interface`.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The name of the interface (e.g., `"eth0"`).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use interface_rs::interface::Interface;
+    ///
+    /// let builder = Interface::builder("eth0");
+    /// ```
+    pub fn builder(name: impl Into<String>) -> InterfaceBuilder {
+        InterfaceBuilder::new(name)
+    }
+
+    /// Creates a new [`InterfaceBuilder`] initialized with this `Interface`'s data.
+    ///
+    /// This method allows you to modify an existing `Interface` using the builder pattern.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use interface_rs::interface::{Interface, Family};
+    ///
+    /// let iface = Interface::builder("eth0")
+    ///     .with_auto(true)
+    ///     .with_family(Family::Inet)
+    ///     .with_method("dhcp")
+    ///     .build();
+    ///
+    /// // Modify the existing interface
+    /// let modified_iface = iface.edit()
+    ///     .with_method("static")
+    ///     .with_option("address", "192.168.1.50")
+    ///     .build();
+    /// ```
+    pub fn edit(&self) -> InterfaceBuilder {
+        InterfaceBuilder {
+            name: self.name.clone(),
+            auto: self.auto,
+            allow: self.allow.clone(),
+            family: self.family.clone(),
+            method: self.method.clone(),
+            options: self.options.iter().cloned().collect::<HashMap<_, _>>(),
+            mapping: self.mapping.clone(),
+        }
+    }
 }
 
 impl fmt::Display for Interface {

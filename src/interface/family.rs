@@ -2,7 +2,7 @@ use std::str::FromStr;
 use std::fmt;
 use std::error::Error;
 
-/// Represents the address family in the `/etc/network/interfaces` file.
+/// Represents the address family in the `interfaces(5)` file.
 ///
 /// The `Family` enum constrains the `family` field to allowed values, ensuring
 /// that only valid address families are used.

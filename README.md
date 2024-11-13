@@ -1,4 +1,4 @@
-# Interface-rs
+# interface-rs
 
 [![Crates.io](https://img.shields.io/crates/v/interface-rs.svg)](https://crates.io/crates/interface-rs)
 [![Documentation](https://docs.rs/interface-rs/badge.svg)](https://docs.rs/interface-rs)
@@ -18,7 +18,8 @@ This library provides structs and functions to load, parse, modify, and save net
   - [Loading Interfaces](#loading-interfaces)
   - [Retrieving an Interface](#retrieving-an-interface)
   - [Adding a New Interface](#adding-a-new-interface)
-  - [Modifying an Interface](#modifying-an-interface)
+  - [Modifying an Existing Interface](#modifying-an-existing-interface)
+  - [Deleting an Interface](#deleting-an-interface)
   - [Saving Changes](#saving-changes)
 - [Documentation](#documentation)
 - [Contributing](#contributing)
@@ -33,6 +34,7 @@ This library provides structs and functions to load, parse, modify, and save net
 - **Modify** network interface configurations programmatically.
 - **Add or remove** network interfaces.
 - **Save** changes back to the file system.
+- **Fluent API** using the builder pattern for creating and modifying interfaces.
 - **Display** interfaces in the correct `interfaces(5)` file format.
 
 ---
@@ -43,7 +45,7 @@ Add `interface-rs` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-interface-rs = "0.1.0"
+interface-rs = "0.2.0"
 ```
 
 Then run:
@@ -104,31 +106,57 @@ use interface_rs::interface::{Interface, Family};
 fn main() -> std::io::Result<()> {
     let mut net_ifaces = NetworkInterfaces::load("/path/to/interfaces")?;
 
-    // Create a new interface
-    let new_iface = Interface {
-        name: "eth2".to_string(),
-        auto: true,
-        allow: vec!["hotplug".to_string()],
-        family: Some(Family::Inet),
-        method: Some("static".to_string()),
-        options: vec![
-            ("address".to_string(), "192.168.1.100".to_string()),
-            ("netmask".to_string(), "255.255.255.0".to_string()),
-        ],
-        mapping: None,
-    };
+    // Create a new interface using the builder pattern
+    let new_iface = Interface::builder("swp1")
+        .with_auto(true)
+        .with_allow("hotplug")
+        .with_family(Family::Inet)
+        .with_method("static")
+        .with_option("address", "192.168.100.1")
+        .with_option("netmask", "255.255.255.0")
+        .build();
 
-    // Add the new interface
+    // Add the new interface to the collection
     net_ifaces.add_interface(new_iface);
 
-    // Save changes
+    // Save changes back to the file
     net_ifaces.save()?;
 
     Ok(())
 }
 ```
 
-### Modifying an Interface
+### Modifying an Existing Interface
+
+```rust
+use interface_rs::NetworkInterfaces;
+use interface_rs::interface::{Interface, Family};
+
+fn main() -> std::io::Result<()> {
+    let mut net_ifaces = NetworkInterfaces::load("/path/to/interfaces")?;
+
+    // Retrieve and modify an existing interface using the builder pattern
+    if let Some(iface) = net_ifaces.get_interface("eth0") {
+        let modified_iface = iface.edit()
+            .with_method("static")
+            .with_option("address", "192.168.1.50")
+            .with_option("netmask", "255.255.255.0")
+            .build();
+
+        // Replace the existing interface with the modified one
+        net_ifaces.add_interface(modified_iface);
+
+        // Save changes back to the file
+        net_ifaces.save()?;
+    } else {
+        println!("Interface eth0 not found.");
+    }
+
+    Ok(())
+}
+```
+
+### Deleting an Interface
 
 ```rust
 use interface_rs::NetworkInterfaces;
@@ -136,18 +164,13 @@ use interface_rs::NetworkInterfaces;
 fn main() -> std::io::Result<()> {
     let mut net_ifaces = NetworkInterfaces::load("/path/to/interfaces")?;
 
-    // Modify an existing interface
-    if let Some(iface) = net_ifaces.interfaces.get_mut("eth0") {
-        iface.method = Some("static".to_string());
-        iface.options.push(("address".to_string(), "192.168.1.50".to_string()));
-        iface.options.push(("netmask".to_string(), "255.255.255.0".to_string()));
-        println!("Interface eth0 modified.");
-    } else {
-        println!("Interface eth0 not found.");
-    }
+    // Delete an interface by name
+    net_ifaces.delete_interface("eth0");
 
-    // Save changes
+    // Save changes back to the file
     net_ifaces.save()?;
+
+    println!("Interface eth0 has been deleted.");
 
     Ok(())
 }

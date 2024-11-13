@@ -1,4 +1,6 @@
-//! # interface-rs
+// src/lib.rs
+
+//! # Interface-rs
 //!
 //! A Rust library for parsing and manipulating an `interfaces(5)` file.
 //!
@@ -10,35 +12,83 @@
 //! ## Features
 //!
 //! - **Load and parse** existing configurations from an `interfaces(5)` file.
-//! - **Modify** interface configurations programmatically.
+//! - **Modify** network interface configurations programmatically.
+//! - **Add or remove** network interfaces.
 //! - **Save** changes back to the file system.
+//! - **Fluent API** using the builder pattern for creating and modifying interfaces.
 //!
 //! ## Example
+//!
+//! ### Loading Interfaces and Modifying an Existing Interface
 //!
 //! ```rust
 //! use interface_rs::NetworkInterfaces;
 //! use interface_rs::interface::{Interface, Family};
 //!
 //! fn main() -> std::io::Result<()> {
-//!     // Load the interfaces file
+//!     // Load the interfaces from a file
 //!     let mut net_ifaces = NetworkInterfaces::load("/path/to/interfaces")?;
 //!
-//!     // Add a new interface
-//!     let new_iface = Interface {
-//!         name: "eth2".to_string(),
-//!         auto: true,
-//!         allow: vec!["hotplug".to_string()],
-//!         family: Some(Family::Inet),
-//!         method: Some("static".to_string()),
-//!         options: vec![
-//!             ("address".to_string(), "192.168.1.100".to_string()),
-//!             ("netmask".to_string(), "255.255.255.0".to_string()),
-//!         ],
-//!         mapping: None,
-//!     };
+//!     // Retrieve and modify an existing interface using the builder pattern
+//!     if let Some(iface) = net_ifaces.get_interface("eth0") {
+//!         let modified_iface = iface.edit()
+//!             .with_method("static")
+//!             .with_option("address", "192.168.1.50")
+//!             .with_option("netmask", "255.255.255.0")
+//!             .build();
+//!
+//!         // Replace the existing interface with the modified one
+//!         net_ifaces.add_interface(modified_iface);
+//!     }
+//!
+//!     // Save changes back to the file
+//!     net_ifaces.save()?;
+//!
+//!     Ok(())
+//! }
+//! ```
+//!
+//! ### Adding a New Interface
+//!
+//! ```rust
+//! use interface_rs::NetworkInterfaces;
+//! use interface_rs::interface::{Interface, Family};
+//!
+//! fn main() -> std::io::Result<()> {
+//!     let mut net_ifaces = NetworkInterfaces::load("/path/to/interfaces")?;
+//!
+//!     // Create a new interface using the builder pattern
+//!     let new_iface = Interface::builder("swp1")
+//!         .with_auto(true)
+//!         .with_allow("hotplug")
+//!         .with_family(Family::Inet)
+//!         .with_method("static")
+//!         .with_option("address", "192.168.100.1")
+//!         .with_option("netmask", "255.255.255.0")
+//!         .build();
+//!
+//!     // Add the new interface to the collection
 //!     net_ifaces.add_interface(new_iface);
 //!
-//!     // Save changes
+//!     // Save changes back to the file
+//!     net_ifaces.save()?;
+//!
+//!     Ok(())
+//! }
+//! ```
+//!
+//! ### Deleting an Interface
+//!
+//! ```rust
+//! use interface_rs::NetworkInterfaces;
+//!
+//! fn main() -> std::io::Result<()> {
+//!     let mut net_ifaces = NetworkInterfaces::load("/path/to/interfaces")?;
+//!
+//!     // Delete an interface by name
+//!     net_ifaces.delete_interface("eth0");
+//!
+//!     // Save changes back to the file
 //!     net_ifaces.save()?;
 //!
 //!     Ok(())
@@ -55,5 +105,5 @@ mod parser;
 pub mod error;
 
 pub use network_interfaces::NetworkInterfaces;
-pub use interface::{Interface, Family, Mapping};
+pub use interface::{Interface, InterfaceBuilder, Family, Mapping};
 pub use error::NetworkInterfacesError;
