@@ -9,7 +9,6 @@ repository = "https://github.com/wiggels/interface-rs"
 license = "MIT"
 keywords = ["network", "interfaces", "linux", "configuration"]
 categories = ["network-programming", "configuration"]
-readme = "README.md"
 documentation = "https://docs.rs/interface-rs"
 
 [dependencies]
