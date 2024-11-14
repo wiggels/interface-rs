@@ -22,21 +22,37 @@ impl Parser {
     ///
     /// # Returns
     ///
-    /// A `Result` containing a `HashMap<String, Interface>` if successful,
+    /// A `Result` containing a tuple `(interfaces, comments, sources)` if successful,
     /// or a `ParserError` if parsing fails.
     pub fn parse(
         &self,
         content: &str,
-    ) -> Result<HashMap<String, Interface>, ParserError> {
+    ) -> Result<(HashMap<String, Interface>, Vec<String>, Vec<String>), ParserError> {
         let mut interfaces = HashMap::new();
         let mut lines = content.lines().enumerate().peekable();
         let mut current_interface: Option<Interface> = None;
+        let mut comments = Vec::new();
+        let mut sources = Vec::new();
 
         while let Some((line_number, line)) = lines.next() {
             let line = line.trim();
 
-            // Skip empty lines and comments
-            if line.is_empty() || line.starts_with('#') {
+            // Collect comments at the top
+            if line.starts_with('#') {
+                if interfaces.is_empty() && current_interface.is_none() {
+                    comments.push(line.to_string());
+                }
+                continue;
+            }
+
+            // Collect source directives
+            if line.starts_with("source") {
+                sources.push(line.to_string());
+                continue;
+            }
+
+            // Skip empty lines
+            if line.is_empty() {
                 continue;
             }
 
@@ -156,7 +172,7 @@ impl Parser {
             interfaces.insert(iface.name.clone(), iface);
         }
 
-        Ok(interfaces)
+        Ok((interfaces, comments, sources))
     }
 }
 
@@ -174,7 +190,7 @@ iface eth0
     vrf mgmt
 "#;
         let parser = Parser::new();
-        let interfaces = parser.parse(content).unwrap();
+        let (interfaces, _comments, _sources) = parser.parse(content).unwrap();
         assert!(interfaces.contains_key("eth0"));
         let iface = &interfaces["eth0"];
         assert_eq!(iface.name, "eth0");
@@ -192,7 +208,7 @@ iface eth1 inet static
     netmask 255.255.255.0
 "#;
         let parser = Parser::new();
-        let interfaces = parser.parse(content).unwrap();
+        let (interfaces, _comments, _sources) = parser.parse(content).unwrap();
         assert!(interfaces.contains_key("eth1"));
         let iface = &interfaces["eth1"];
         assert_eq!(iface.name, "eth1");
@@ -217,7 +233,7 @@ iface wlan0 inet static
     netmask 255.255.255.0
 "#;
         let parser = Parser::new();
-        let interfaces = parser.parse(content).unwrap();
+        let (interfaces, _comments, _sources) = parser.parse(content).unwrap();
 
         assert_eq!(interfaces.len(), 3);
 
@@ -259,7 +275,7 @@ iface wlan0 inet static
     netmask 255.255.255.0
 "#;
         let parser = Parser::new();
-        let interfaces = parser.parse(content).unwrap();
+        let (interfaces, _comments, _sources) = parser.parse(content).unwrap();
 
         assert_eq!(interfaces.len(), 3);
 
@@ -320,7 +336,7 @@ iface vlan101
     vlan-raw-device bridge
     "#;
         let parser = Parser::new();
-        let interfaces = parser.parse(content).unwrap();
+        let (interfaces, _comments, _sources) = parser.parse(content).unwrap();
     
         assert_eq!(interfaces.len(), 4);
     

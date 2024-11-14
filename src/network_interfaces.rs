@@ -24,7 +24,7 @@ use std::fmt;
 /// let mut net_ifaces = NetworkInterfaces::load("/path/to/interfaces").unwrap();
 ///
 /// // Modify an interface
-/// if let Some(iface) = net_ifaces.interfaces.get_mut("eth0") {
+/// if let Some(iface) = net_ifaces.get_interface_mut("eth0") {
 ///     iface.method = Some("static".to_string());
 ///     iface.options.push(("address".to_string(), "192.168.1.100".to_string()));
 /// }
@@ -35,14 +35,35 @@ use std::fmt;
 #[derive(Debug)]
 pub struct NetworkInterfaces {
     /// A mapping of interface names to their configurations.
-    pub interfaces: HashMap<String, Interface>,
+    interfaces: HashMap<String, Interface>,
     /// The path to the interfaces file.
     path: Option<PathBuf>,
     /// The last modified time of the interfaces file.
     last_modified: Option<SystemTime>,
+    /// Comments from the original file
+    comments: Vec<String>,
+    /// Source directives from the original file
+    sources: Vec<String>,
 }
 
 impl NetworkInterfaces {
+    /// Creates a new `NetworkInterfaces` instance.
+    fn new(
+        interfaces: HashMap<String, Interface>,
+        comments: Vec<String>,
+        sources: Vec<String>,
+        path: Option<PathBuf>,
+        last_modified: Option<SystemTime>,
+    ) -> Self {
+        NetworkInterfaces {
+            interfaces,
+            comments,
+            sources,
+            path,
+            last_modified,
+        }
+    }
+
     /// Loads the `interfaces(5)` file into memory.
     ///
     /// # Arguments
@@ -63,13 +84,15 @@ impl NetworkInterfaces {
 
         let content = fs::read_to_string(&path_buf)?;
         let parser = Parser::new();
-        let interfaces = parser.parse(&content)?;
+        let (interfaces, comments, sources) = parser.parse(&content)?;
 
-        Ok(NetworkInterfaces {
+        Ok(NetworkInterfaces::new(
             interfaces,
-            path: Some(path_buf),
-            last_modified: Some(last_modified),
-        })
+            comments,
+            sources,
+            Some(path_buf),
+            Some(last_modified),
+        ))
     }
 
     /// Retrieves a reference to an interface by name.
@@ -83,6 +106,19 @@ impl NetworkInterfaces {
     /// An `Option` containing a reference to the `Interface` if found.
     pub fn get_interface(&self, name: &str) -> Option<&Interface> {
         self.interfaces.get(name)
+    }
+
+    /// Retrieves a mutable reference to an interface by name.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The name of the interface.
+    ///
+    /// # Returns
+    ///
+    /// An `Option` containing a mutable reference to the `Interface` if found.
+    pub fn get_interface_mut(&mut self, name: &str) -> Option<&mut Interface> {
+        self.interfaces.get_mut(name)
     }
 
     /// Adds or updates an interface in the collection.
@@ -101,6 +137,16 @@ impl NetworkInterfaces {
     /// * `name` - The name of the interface to delete.
     pub fn delete_interface(&mut self, name: &str) {
         self.interfaces.remove(name);
+    }
+
+    /// Returns the number of interfaces.
+    pub fn len(&self) -> usize {
+        self.interfaces.len()
+    }
+
+    /// Checks if the collection is empty.
+    pub fn is_empty(&self) -> bool {
+        self.interfaces.is_empty()
     }
 
     /// Saves changes back to the `interfaces(5)` file.
@@ -130,10 +176,24 @@ impl NetworkInterfaces {
 
         let mut file = fs::File::create(&path)?;
 
+        // Write comments at the top
+        for comment in &self.comments {
+            writeln!(file, "{}", comment)?;
+        }
+
+        // Write source directives
+        for source in &self.sources {
+            writeln!(file, "{}", source)?;
+        }
+
+        // Collect interfaces into a vector and sort them by name
+        let mut interfaces: Vec<&Interface> = self.interfaces.values().collect();
+        interfaces.sort_by(|a, b| a.name.cmp(&b.name));
+
         // Write interfaces to file
-        for iface in self.interfaces.values() {
+        for iface in interfaces {
+            writeln!(file)?;
             write!(file, "{}", iface)?;
-            writeln!(file)?; // Blank line between interfaces
         }
 
         // Update last_modified
@@ -157,6 +217,8 @@ impl NetworkInterfaces {
         };
         let reloaded = NetworkInterfaces::load(&path)?;
         self.interfaces = reloaded.interfaces;
+        self.comments = reloaded.comments;
+        self.sources = reloaded.sources;
         self.last_modified = reloaded.last_modified;
         Ok(())
     }
@@ -165,9 +227,34 @@ impl NetworkInterfaces {
 // Implement Display for NetworkInterfaces to allow easy printing
 impl fmt::Display for NetworkInterfaces {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for iface in self.interfaces.values() {
-            write!(f, "{}\n", iface)?;
+        // Print comments at the top if any
+        for comment in &self.comments {
+            writeln!(f, "{}", comment)?;
+        }
+
+        // Print source directives if any
+        for source in &self.sources {
+            writeln!(f, "{}", source)?;
+        }
+
+        // Collect interfaces into a vector and sort them by name
+        let mut interfaces: Vec<&Interface> = self.interfaces.values().collect();
+        interfaces.sort_by(|a, b| a.name.cmp(&b.name));
+
+        // Print interfaces
+        for iface in interfaces {
+            writeln!(f)?;
+            write!(f, "{}", iface)?;
         }
         Ok(())
     }
 }
+
+// Implement methods to access interfaces directly if needed
+impl NetworkInterfaces {
+    /// Returns an iterator over the interfaces.
+    pub fn iter(&self) -> impl Iterator<Item = (&String, &Interface)> {
+        self.interfaces.iter()
+    }
+}
+
