@@ -111,11 +111,19 @@ impl fmt::Display for Interface {
                 writeln!(f, "    map {}", map)?;
             }
         }
-        if let (Some(family), Some(method)) = (&self.family, &self.method) {
-            writeln!(f, "iface {} {} {}", self.name, family, method)?;
-            for (option_name, option_value) in &self.options {
-                writeln!(f, "    {} {}", option_name, option_value)?;
-            }
+        write!(f, "iface {}", self.name)?;
+        if let Some(family) = &self.family {
+            write!(f, " {}", family)?;
+        }
+        if let Some(method) = &self.method {
+            write!(f, " {}", method)?;
+        }
+        writeln!(f)?;
+        // Sort options before printing
+        let mut sorted_options = self.options.clone();
+        sorted_options.sort_by(|a, b| a.0.cmp(&b.0));
+        for (option_name, option_value) in &sorted_options {
+            writeln!(f, "    {} {}", option_name, option_value)?;
         }
         Ok(())
     }

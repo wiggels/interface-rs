@@ -286,4 +286,138 @@ iface wlan0 inet static
         assert!(wlan0_iface.options.contains(&("address".to_string(), "192.168.0.100".to_string())));
         assert!(wlan0_iface.options.contains(&("netmask".to_string(), "255.255.255.0".to_string())));
     }
+
+    #[test]
+    fn test_parse_multiple_interfaces_cumulus() {
+        let content = r#"
+auto swp54
+iface swp54
+    bridge-access 199
+    mstpctl-bpduguard yes
+    mstpctl-portadminedge yes
+    mtu 9216
+    post-down /some/script.sh
+    post-up /some/script.sh
+
+auto bridge
+iface bridge
+    bridge-ports swp1 swp2 swp3 swp4 swp5 swp6 swp7 swp8 swp9 swp10 swp11 swp12 swp13 swp14 swp15 swp16 swp17 swp18 swp19 swp20 swp21 swp22 swp23 swp24 swp31 swp32 swp33 swp34 swp35 swp36 swp37 swp38 swp39 swp40 swp41 swp42 swp43 swp44 swp45 swp46 swp47 swp48 swp49 swp50 swp51 swp52 swp53 swp54
+    bridge-pvid 1
+    bridge-vids 100-154 199
+    bridge-vlan-aware yes
+
+auto mgmt
+iface mgmt
+    address 127.0.0.1/8
+    address ::1/128
+    vrf-table auto
+
+auto vlan101
+iface vlan101
+    mtu 9216
+    post-up /some/script.sh
+    vlan-id 101
+    vlan-raw-device bridge
+    "#;
+        let parser = Parser::new();
+        let interfaces = parser.parse(content).unwrap();
+    
+        assert_eq!(interfaces.len(), 4);
+    
+        // Check 'swp54' interface
+        let swp54_iface = &interfaces["swp54"];
+        assert_eq!(swp54_iface.name, "swp54");
+        assert_eq!(swp54_iface.auto, true);
+        assert_eq!(swp54_iface.family, None);
+        assert_eq!(swp54_iface.method, None);
+        // Check options
+        assert!(swp54_iface.options.contains(&("bridge-access".to_string(), "199".to_string())));
+        assert!(swp54_iface.options.contains(&("mstpctl-bpduguard".to_string(), "yes".to_string())));
+        assert!(swp54_iface.options.contains(&("mstpctl-portadminedge".to_string(), "yes".to_string())));
+        assert!(swp54_iface.options.contains(&("mtu".to_string(), "9216".to_string())));
+        assert!(swp54_iface.options.contains(&("post-down".to_string(), "/some/script.sh".to_string())));
+        assert!(swp54_iface.options.contains(&("post-up".to_string(), "/some/script.sh".to_string())));
+    
+        // Check 'bridge' interface
+        let bridge_iface = &interfaces["bridge"];
+        assert_eq!(bridge_iface.name, "bridge");
+        assert_eq!(bridge_iface.auto, true);
+        assert_eq!(bridge_iface.family, None);
+        assert_eq!(bridge_iface.method, None);
+        // Check options
+        assert!(bridge_iface.options.contains(&("bridge-ports".to_string(), "swp1 swp2 swp3 swp4 swp5 swp6 swp7 swp8 swp9 swp10 swp11 swp12 swp13 swp14 swp15 swp16 swp17 swp18 swp19 swp20 swp21 swp22 swp23 swp24 swp31 swp32 swp33 swp34 swp35 swp36 swp37 swp38 swp39 swp40 swp41 swp42 swp43 swp44 swp45 swp46 swp47 swp48 swp49 swp50 swp51 swp52 swp53 swp54".to_string())));
+        assert!(bridge_iface.options.contains(&("bridge-pvid".to_string(), "1".to_string())));
+        assert!(bridge_iface.options.contains(&("bridge-vids".to_string(), "100-154 199".to_string())));
+        assert!(bridge_iface.options.contains(&("bridge-vlan-aware".to_string(), "yes".to_string())));
+    
+        // Check 'mgmt' interface
+        let mgmt_iface = &interfaces["mgmt"];
+        assert_eq!(mgmt_iface.name, "mgmt");
+        assert_eq!(mgmt_iface.auto, true);
+        assert_eq!(mgmt_iface.family, None);
+        assert_eq!(mgmt_iface.method, None);
+        // Check options
+        assert!(mgmt_iface.options.contains(&("address".to_string(), "127.0.0.1/8".to_string())));
+        assert!(mgmt_iface.options.contains(&("address".to_string(), "::1/128".to_string())));
+        assert!(mgmt_iface.options.contains(&("vrf-table".to_string(), "auto".to_string())));
+    
+        // Check 'vlan101' interface
+        let vlan101_iface = &interfaces["vlan101"];
+        assert_eq!(vlan101_iface.name, "vlan101");
+        assert_eq!(vlan101_iface.auto, true);
+        assert_eq!(vlan101_iface.family, None);
+        assert_eq!(vlan101_iface.method, None);
+        // Check options
+        assert!(vlan101_iface.options.contains(&("mtu".to_string(), "9216".to_string())));
+        assert!(vlan101_iface.options.contains(&("post-up".to_string(), "/some/script.sh".to_string())));
+        assert!(vlan101_iface.options.contains(&("vlan-id".to_string(), "101".to_string())));
+        assert!(vlan101_iface.options.contains(&("vlan-raw-device".to_string(), "bridge".to_string())));
+
+        // Check print/display formatting
+        // At the end of the test
+        let mut output = String::new();
+        output.push_str(&format!("{}\n", swp54_iface));
+        output.push_str(&format!("{}\n", bridge_iface));
+        output.push_str(&format!("{}\n", mgmt_iface));
+        output.push_str(&format!("{}\n", vlan101_iface));
+
+        // Expected output
+        let expected_output = r#"
+auto swp54
+iface swp54
+    bridge-access 199
+    mstpctl-bpduguard yes
+    mstpctl-portadminedge yes
+    mtu 9216
+    post-down /some/script.sh
+    post-up /some/script.sh
+
+auto bridge
+iface bridge
+    bridge-ports swp1 swp2 swp3 swp4 swp5 swp6 swp7 swp8 swp9 swp10 swp11 swp12 swp13 swp14 swp15 swp16 swp17 swp18 swp19 swp20 swp21 swp22 swp23 swp24 swp31 swp32 swp33 swp34 swp35 swp36 swp37 swp38 swp39 swp40 swp41 swp42 swp43 swp44 swp45 swp46 swp47 swp48 swp49 swp50 swp51 swp52 swp53 swp54
+    bridge-pvid 1
+    bridge-vids 100-154 199
+    bridge-vlan-aware yes
+
+auto mgmt
+iface mgmt
+    address 127.0.0.1/8
+    address ::1/128
+    vrf-table auto
+
+auto vlan101
+iface vlan101
+    mtu 9216
+    post-up /some/script.sh
+    vlan-id 101
+    vlan-raw-device bridge
+"#;
+
+        // Remove extra blank lines if any
+        let expected_output = expected_output.trim();
+        let output = output.trim();
+
+        assert_eq!(output, expected_output);
+
+    }    
 }
