@@ -1,4 +1,4 @@
-use crate::interface::{Family, Interface, Mapping};
+use crate::interface::{Family, Interface};
 use crate::error::ParserError;
 use std::collections::HashMap;
 
@@ -28,244 +28,262 @@ impl Parser {
         &self,
         content: &str,
     ) -> Result<HashMap<String, Interface>, ParserError> {
-        let mut interfaces: HashMap<String, Interface> = HashMap::new();
-        let mut lines_iter = content.lines().enumerate().peekable();
+        let mut interfaces = HashMap::new();
+        let mut lines = content.lines().enumerate().peekable();
+        let mut current_interface: Option<Interface> = None;
 
-        while let Some((line_number, line)) = lines_iter.next() {
-            let line_number = line_number + 1; // Make line numbers 1-based
-            let line = line.trim_end();
+        while let Some((line_number, line)) = lines.next() {
+            let line = line.trim();
 
-            if line.trim().is_empty() || line.trim_start().starts_with('#') {
+            // Skip empty lines and comments
+            if line.is_empty() || line.starts_with('#') {
                 continue;
             }
 
-            // Handle line continuation
-            let mut current_line = line.to_string();
-            while current_line.trim_end().ends_with('\\') {
-                current_line =
-                    current_line.trim_end_matches('\\').to_string();
-                if let Some((_, next_line)) = lines_iter.next() {
-                    current_line.push_str(next_line.trim_start());
-                } else {
-                    break;
-                }
-            }
-
-            let tokens: Vec<&str> = current_line
-                .trim()
-                .split_whitespace()
-                .collect();
-
+            let tokens: Vec<&str> = line.split_whitespace().collect();
             if tokens.is_empty() {
                 continue;
             }
 
+            // Finish the previous interface if necessary
             match tokens[0] {
-                "auto" => {
-                    for iface_name in &tokens[1..] {
-                        let iface = interfaces
-                            .entry(iface_name.to_string())
-                            .or_insert_with(|| Interface {
-                                name: iface_name.to_string(),
-                                auto: true,
-                                allow: Vec::new(),
-                                family: None,
-                                method: None,
-                                options: Vec::new(),
-                                mapping: None,
-                            });
-                        iface.auto = true;
+                "auto" | "mapping" | "iface" => {
+                    if let Some(iface) = current_interface.take() {
+                        interfaces.insert(iface.name.clone(), iface);
                     }
                 }
                 s if s.starts_with("allow-") => {
-                    let allow_type =
-                        s.trim_start_matches("allow-").to_string();
-                    for iface_name in &tokens[1..] {
-                        let iface = interfaces
-                            .entry(iface_name.to_string())
-                            .or_insert_with(|| Interface {
-                                name: iface_name.to_string(),
-                                auto: false,
-                                allow: vec![allow_type.clone()],
-                                family: None,
-                                method: None,
-                                options: Vec::new(),
-                                mapping: None,
-                            });
-                        iface.allow.push(allow_type.clone());
+                    if let Some(iface) = current_interface.take() {
+                        interfaces.insert(iface.name.clone(), iface);
+                    }
+                }
+                _ => {}
+            }
+
+            match tokens[0] {
+                "auto" => {
+                    for &iface_name in &tokens[1..] {
+                        if let Some(iface) = interfaces.get_mut(iface_name) {
+                            // If interface exists, set auto to true
+                            iface.auto = true;
+                        } else {
+                            // Interface doesn't exist yet, create it with auto = true
+                            interfaces.insert(
+                                iface_name.to_string(),
+                                Interface::builder(iface_name).with_auto(true).build(),
+                            );
+                        }
+                    }
+                }
+                s if s.starts_with("allow-") => {
+                    let allow_type = s.strip_prefix("allow-").unwrap();
+                    for &iface_name in &tokens[1..] {
+                        if let Some(iface) = interfaces.get_mut(iface_name) {
+                            // If interface exists, add to allow list
+                            iface.allow.push(allow_type.to_string());
+                        } else {
+                            // Interface doesn't exist yet, create it with allow
+                            let mut iface = Interface::builder(iface_name).build();
+                            iface.allow.push(allow_type.to_string());
+                            interfaces.insert(iface_name.to_string(), iface);
+                        }
                     }
                 }
                 "iface" => {
-                    let name = tokens.get(1).ok_or_else(|| ParserError {
-                        message: "Missing interface name in 'iface' stanza"
-                            .to_string(),
-                        line: Some(line_number),
+                    // Start a new interface
+                    let iface_name = tokens.get(1).ok_or_else(|| ParserError {
+                        message: "Missing interface name in 'iface' stanza".to_string(),
+                        line: Some(line_number + 1),
                     })?.to_string();
 
-                    let family_str = tokens.get(2).ok_or_else(|| ParserError {
-                        message: "Missing family in 'iface' stanza"
-                            .to_string(),
-                        line: Some(line_number),
-                    })?;
+                    // Remove existing interface if any
+                    let existing_iface = interfaces.remove(&iface_name);
 
-                    let method_str = tokens.get(3).ok_or_else(|| ParserError {
-                        message: "Missing method in 'iface' stanza"
-                            .to_string(),
-                        line: Some(line_number),
-                    })?.to_string();
+                    // Build the interface using existing settings if available
+                    let mut builder = if let Some(existing_iface) = existing_iface {
+                        existing_iface.edit()
+                    } else {
+                        Interface::builder(iface_name.clone())
+                    };
 
-                    let family = family_str.parse::<Family>()
-                        .map_err(|e| ParserError {
+                    // Parse family
+                    let family = match tokens.get(2) {
+                        Some(s) => Some(s.parse::<Family>().map_err(|e| ParserError {
                             message: e.to_string(),
-                            line: Some(line_number),
-                        })?;
+                            line: Some(line_number + 1),
+                        })?),
+                        None => None,
+                    };
 
-                    let iface = interfaces.entry(name.clone())
-                        .or_insert_with(|| Interface {
-                            name: name.clone(),
-                            auto: false,
-                            allow: Vec::new(),
-                            family: Some(family.clone()),
-                            method: Some(method_str.clone()),
-                            options: Vec::new(),
-                            mapping: None,
-                        });
-                    iface.family = Some(family);
-                    iface.method = Some(method_str);
+                    // Parse method
+                    let method = tokens.get(3).map(|s| s.to_string());
 
-                    // Parse options
-                    while let Some(&(next_line_number, next_line)) =
-                        lines_iter.peek()
-                    {
-                        let next_line_number = next_line_number + 1;
-                        let next_line = next_line.trim_end();
-                        if next_line.trim().is_empty()
-                            || next_line.trim_start().starts_with('#')
-                        {
-                            lines_iter.next();
-                            continue;
-                        }
-                        if next_line.starts_with(char::is_whitespace) {
-                            let (_, option_line) = lines_iter.next()
-                                .unwrap();
-                            let option_line = option_line.trim();
-                            let mut option_tokens = option_line
-                                .split_whitespace();
-                            if let Some(option_name) =
-                                option_tokens.next()
-                            {
-                                let option_value = option_tokens
-                                    .collect::<Vec<&str>>()
-                                    .join(" ");
-                                iface.options.push((
-                                    option_name.to_string(),
-                                    option_value,
-                                ));
-                            } else {
-                                return Err(ParserError {
-                                    message: "Invalid option syntax"
-                                        .to_string(),
-                                    line: Some(next_line_number),
-                                });
-                            }
-                        } else {
-                            break;
-                        }
+                    if let Some(family) = family {
+                        builder = builder.with_family(family);
                     }
+
+                    if let Some(method) = method {
+                        builder = builder.with_method(method);
+                    }
+
+                    current_interface = Some(builder.build());
                 }
                 "mapping" => {
-                    let interface_pattern =
-                        tokens.get(1).ok_or_else(|| ParserError {
-                            message:
-                                "Missing interface pattern in 'mapping' stanza"
-                                    .to_string(),
-                            line: Some(line_number),
-                        })?.to_string();
-
-                    let mut script = None;
-                    let mut maps = Vec::new();
-
-                    while let Some(&(next_line_number, next_line)) =
-                        lines_iter.peek()
-                    {
-                        let next_line_number = next_line_number + 1;
-                        let next_line = next_line.trim_end();
-                        if next_line.trim().is_empty()
-                            || next_line.trim_start().starts_with('#')
-                        {
-                            lines_iter.next();
-                            continue;
-                        }
-                        if next_line.starts_with(char::is_whitespace) {
-                            let (_, indented_line) = lines_iter.next()
-                                .unwrap();
-                            let indented_line = indented_line.trim();
-                            let mut indented_tokens = indented_line
-                                .split_whitespace();
-                            if let Some(first_token) =
-                                indented_tokens.next()
-                            {
-                                match first_token {
-                                    "script" => {
-                                        script = Some(indented_tokens
-                                            .collect::<Vec<&str>>()
-                                            .join(" "));
-                                    }
-                                    "map" => {
-                                        let map_value = indented_tokens
-                                            .collect::<Vec<&str>>()
-                                            .join(" ");
-                                        maps.push(map_value);
-                                    }
-                                    _ => {
-                                        return Err(ParserError {
-                                            message: format!(
-                                                "Unknown token '{}' in 'mapping' stanza",
-                                                first_token
-                                            ),
-                                            line: Some(next_line_number),
-                                        });
-                                    }
-                                }
-                            } else {
-                                return Err(ParserError {
-                                    message:
-                                        "Invalid syntax in 'mapping' stanza"
-                                            .to_string(),
-                                    line: Some(next_line_number),
-                                });
-                            }
-                        } else {
-                            break;
-                        }
-                    }
-
-                    let script = script.ok_or_else(|| ParserError {
-                        message:
-                            "Missing 'script' in 'mapping' stanza"
-                                .to_string(),
-                        line: Some(line_number),
-                    })?;
-
-                    let iface = interfaces.entry(interface_pattern.clone())
-                        .or_insert_with(|| Interface {
-                            name: interface_pattern.clone(),
-                            auto: false,
-                            allow: Vec::new(),
-                            family: None,
-                            method: None,
-                            options: Vec::new(),
-                            mapping: None,
-                        });
-                    iface.mapping = Some(Mapping { script, maps });
+                    // Handle 'mapping' stanzas if needed
+                    // For now, we ignore unknown stanzas
                 }
                 _ => {
-                    // Handle other stanzas or ignore
-                    // For now, we ignore unknown stanzas
+                    // Parse options under 'iface' stanza
+                    if let Some(iface) = &mut current_interface {
+                        let mut tokens = line.split_whitespace();
+                        if let Some(option_name) = tokens.next() {
+                            let option_value = tokens.collect::<Vec<&str>>().join(" ");
+                            iface.options.push((
+                                option_name.to_string(),
+                                option_value,
+                            ));
+                        }
+                    } else {
+                        // Handle global options if needed
+                        // For now, we ignore unknown stanzas outside of an 'iface'
+                    }
                 }
             }
         }
 
+        // Insert the last interface
+        if let Some(iface) = current_interface {
+            interfaces.insert(iface.name.clone(), iface);
+        }
+
         Ok(interfaces)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::interface::Family;
+
+    #[test]
+    fn test_parse_iface_without_family_and_method() {
+        let content = r#"
+auto eth0
+iface eth0
+    address 10.130.17.36/255.255.255.128
+    vrf mgmt
+"#;
+        let parser = Parser::new();
+        let interfaces = parser.parse(content).unwrap();
+        assert!(interfaces.contains_key("eth0"));
+        let iface = &interfaces["eth0"];
+        assert_eq!(iface.name, "eth0");
+        assert_eq!(iface.family, None);
+        assert_eq!(iface.method, None);
+        assert!(iface.options.contains(&("address".to_string(), "10.130.17.36/255.255.255.128".to_string())));
+        assert!(iface.options.contains(&("vrf".to_string(), "mgmt".to_string())));
+    }
+
+    #[test]
+    fn test_parse_iface_with_family_and_method() {
+        let content = r#"
+iface eth1 inet static
+    address 192.168.1.10
+    netmask 255.255.255.0
+"#;
+        let parser = Parser::new();
+        let interfaces = parser.parse(content).unwrap();
+        assert!(interfaces.contains_key("eth1"));
+        let iface = &interfaces["eth1"];
+        assert_eq!(iface.name, "eth1");
+        assert_eq!(iface.family, Some(Family::Inet));
+        assert_eq!(iface.method.as_deref(), Some("static"));
+        assert!(iface.options.contains(&("address".to_string(), "192.168.1.10".to_string())));
+        assert!(iface.options.contains(&("netmask".to_string(), "255.255.255.0".to_string())));
+    }
+
+    #[test]
+    fn test_parse_multiple_interfaces() {
+        let content = r#"
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet dhcp
+
+auto wlan0
+iface wlan0 inet static
+    address 192.168.0.100
+    netmask 255.255.255.0
+"#;
+        let parser = Parser::new();
+        let interfaces = parser.parse(content).unwrap();
+
+        assert_eq!(interfaces.len(), 3);
+
+        // Check 'lo' interface
+        let lo_iface = &interfaces["lo"];
+        assert_eq!(lo_iface.name, "lo");
+        assert_eq!(lo_iface.auto, true);
+        assert_eq!(lo_iface.family, Some(Family::Inet));
+        assert_eq!(lo_iface.method.as_deref(), Some("loopback"));
+
+        // Check 'eth0' interface
+        let eth0_iface = &interfaces["eth0"];
+        assert_eq!(eth0_iface.name, "eth0");
+        assert_eq!(eth0_iface.auto, true);
+        assert_eq!(eth0_iface.family, Some(Family::Inet));
+        assert_eq!(eth0_iface.method.as_deref(), Some("dhcp"));
+
+        // Check 'wlan0' interface
+        let wlan0_iface = &interfaces["wlan0"];
+        assert_eq!(wlan0_iface.name, "wlan0");
+        assert_eq!(wlan0_iface.auto, true);
+        assert_eq!(wlan0_iface.family, Some(Family::Inet));
+        assert_eq!(wlan0_iface.method.as_deref(), Some("static"));
+        assert!(wlan0_iface.options.contains(&("address".to_string(), "192.168.0.100".to_string())));
+        assert!(wlan0_iface.options.contains(&("netmask".to_string(), "255.255.255.0".to_string())));
+    }
+
+    #[test]
+    fn test_parse_multiple_interfaces_strange_order() {
+        let content = r#"
+iface lo inet loopback
+iface eth0 inet dhcp
+auto eth0
+
+auto wlan0
+auto lo
+iface wlan0 inet static
+    address 192.168.0.100
+    netmask 255.255.255.0
+"#;
+        let parser = Parser::new();
+        let interfaces = parser.parse(content).unwrap();
+
+        assert_eq!(interfaces.len(), 3);
+
+        // Check 'lo' interface
+        let lo_iface = &interfaces["lo"];
+        assert_eq!(lo_iface.name, "lo");
+        assert_eq!(lo_iface.auto, true);
+        assert_eq!(lo_iface.family, Some(Family::Inet));
+        assert_eq!(lo_iface.method.as_deref(), Some("loopback"));
+
+        // Check 'eth0' interface
+        let eth0_iface = &interfaces["eth0"];
+        assert_eq!(eth0_iface.name, "eth0");
+        assert_eq!(eth0_iface.auto, true);
+        assert_eq!(eth0_iface.family, Some(Family::Inet));
+        assert_eq!(eth0_iface.method.as_deref(), Some("dhcp"));
+
+        // Check 'wlan0' interface
+        let wlan0_iface = &interfaces["wlan0"];
+        assert_eq!(wlan0_iface.name, "wlan0");
+        assert_eq!(wlan0_iface.auto, true);
+        assert_eq!(wlan0_iface.family, Some(Family::Inet));
+        assert_eq!(wlan0_iface.method.as_deref(), Some("static"));
+        assert!(wlan0_iface.options.contains(&("address".to_string(), "192.168.0.100".to_string())));
+        assert!(wlan0_iface.options.contains(&("netmask".to_string(), "255.255.255.0".to_string())));
     }
 }
