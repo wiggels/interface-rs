@@ -99,11 +99,11 @@
 //!
 //! This project is licensed under the MIT License.
 
+pub mod error;
 pub mod interface;
 pub mod network_interfaces;
 mod parser;
-pub mod error;
 
-pub use network_interfaces::NetworkInterfaces;
-pub use interface::{Interface, InterfaceBuilder, Family, Mapping};
 pub use error::NetworkInterfacesError;
+pub use interface::{Family, Interface, InterfaceBuilder, Mapping};
+pub use network_interfaces::NetworkInterfaces;

@@ -26,7 +26,7 @@ pub struct InterfaceBuilder {
     pub(crate) allow: Vec<String>,
     pub(crate) family: Option<Family>,
     pub(crate) method: Option<String>,
-    pub(crate) options: Vec<(String, String)>, 
+    pub(crate) options: Vec<(String, String)>,
     pub(crate) mapping: Option<Mapping>,
 }
 
@@ -230,7 +230,6 @@ impl InterfaceBuilder {
         self.options.retain(|(k, v)| !(k == key && v == value));
         self
     }
-    
 
     /// Builds the [`Interface`] instance.
     ///
@@ -275,7 +274,10 @@ mod tests {
             .build();
 
         assert_eq!(iface.options.len(), 1);
-        assert_eq!(iface.options[0], ("netmask".to_string(), "255.255.255.0".to_string()));
+        assert_eq!(
+            iface.options[0],
+            ("netmask".to_string(), "255.255.255.0".to_string())
+        );
     }
 
     #[test]
@@ -287,10 +289,16 @@ mod tests {
             .with_option("address", "192.168.1.52") // Duplicate address key with different value
             .remove_option_value("address", "192.168.1.50") // Should remove only this address pair
             .build();
-    
+
         assert_eq!(iface.options.len(), 3);
-        assert!(iface.options.contains(&("netmask".to_string(), "255.255.255.0".to_string())));
-        assert!(iface.options.contains(&("address".to_string(), "192.168.1.51".to_string())));
-        assert!(iface.options.contains(&("address".to_string(), "192.168.1.52".to_string())));
+        assert!(iface
+            .options
+            .contains(&("netmask".to_string(), "255.255.255.0".to_string())));
+        assert!(iface
+            .options
+            .contains(&("address".to_string(), "192.168.1.51".to_string())));
+        assert!(iface
+            .options
+            .contains(&("address".to_string(), "192.168.1.52".to_string())));
     }
 }

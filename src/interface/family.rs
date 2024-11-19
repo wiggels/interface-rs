@@ -1,6 +1,6 @@
-use std::str::FromStr;
-use std::fmt;
 use std::error::Error;
+use std::fmt;
+use std::str::FromStr;
 
 /// Represents the address family in the `interfaces(5)` file.
 ///

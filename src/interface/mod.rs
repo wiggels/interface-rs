@@ -8,11 +8,11 @@
 //! Refer to the `interfaces(5)` manual page for details on the file format.
 
 pub mod family;
-pub mod mapping;
-pub mod interface_struct;
 pub mod interface_builder;
+pub mod interface_struct;
+pub mod mapping;
 
 pub use family::{Family, FamilyParseError};
-pub use mapping::Mapping;
-pub use interface_struct::Interface;
 pub use interface_builder::InterfaceBuilder;
+pub use interface_struct::Interface;
+pub use mapping::Mapping;

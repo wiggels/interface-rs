@@ -1,12 +1,12 @@
+use crate::error::NetworkInterfacesError;
 use crate::interface::Interface;
 use crate::parser::Parser;
-use crate::error::NetworkInterfacesError;
 use std::collections::HashMap;
+use std::fmt;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
-use std::fmt;
 
 /// Represents the collection of network interfaces defined in an `interfaces(5)` file.
 ///
@@ -215,7 +215,7 @@ impl NetworkInterfaces {
                 ))
             }
         };
-        let reloaded = NetworkInterfaces::load(&path)?;
+        let reloaded = NetworkInterfaces::load(path)?;
         self.interfaces = reloaded.interfaces;
         self.comments = reloaded.comments;
         self.sources = reloaded.sources;
@@ -257,4 +257,3 @@ impl NetworkInterfaces {
         self.interfaces.iter()
     }
 }
-
