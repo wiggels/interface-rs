@@ -1,5 +1,5 @@
 use super::{Family, InterfaceBuilder, Mapping};
-use std::{collections::HashMap, fmt};
+use std::fmt;
 
 /// Represents a network interface configuration in an `interfaces(5)` file.
 ///
@@ -90,7 +90,7 @@ impl Interface {
             allow: self.allow.clone(),
             family: self.family.clone(),
             method: self.method.clone(),
-            options: self.options.iter().cloned().collect::<HashMap<_, _>>(),
+            options: self.options.clone(),
             mapping: self.mapping.clone(),
         }
     }

@@ -1,5 +1,4 @@
 use super::{Family, Interface, Mapping};
-use std::collections::HashMap;
 
 /// A builder for constructing [`Interface`] instances.
 ///
@@ -27,7 +26,7 @@ pub struct InterfaceBuilder {
     pub(crate) allow: Vec<String>,
     pub(crate) family: Option<Family>,
     pub(crate) method: Option<String>,
-    pub(crate) options: HashMap<String, String>,
+    pub(crate) options: Vec<(String, String)>, 
     pub(crate) mapping: Option<Mapping>,
 }
 
@@ -52,7 +51,7 @@ impl InterfaceBuilder {
             allow: Vec::new(),
             family: None,
             method: None,
-            options: HashMap::new(),
+            options: Vec::new(),
             mapping: None,
         }
     }
@@ -144,7 +143,7 @@ impl InterfaceBuilder {
     ///     .with_option("address", "192.168.1.100");
     /// ```
     pub fn with_option(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
-        self.options.insert(key.into(), value.into());
+        self.options.push((key.into(), value.into()));
         self
     }
 
@@ -170,6 +169,69 @@ impl InterfaceBuilder {
         self
     }
 
+    /// Removes all options with the specified key from the interface configuration.
+    ///
+    /// This method removes all key-value pairs in the options where the key matches
+    /// the specified `key`.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The name of the option to remove (e.g., `"address"`).
+    ///
+    /// # Returns
+    ///
+    /// Returns the builder instance with the specified options removed, allowing
+    /// further chained method calls.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use interface_rs::interface::Interface;
+    /// let builder = Interface::builder("eth0")
+    ///     .with_option("address", "192.168.1.100")
+    ///     .with_option("address", "192.168.1.101")
+    ///     .remove_option("address");
+    ///
+    /// // The builder no longer contains any "address" options.
+    /// ```
+    pub fn remove_option(mut self, key: &str) -> Self {
+        self.options.retain(|(k, _)| k != key);
+        self
+    }
+
+    /// Removes a specific option by its key and value from the interface configuration.
+    ///
+    /// This method removes only the key-value pair in the options where both the key
+    /// matches the specified `key` and the value matches the specified `value`.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The name of the option to remove (e.g., `"address"`).
+    /// * `value` - The specific value of the option to remove (e.g., `"192.168.1.100"`).
+    ///
+    /// # Returns
+    ///
+    /// Returns the builder instance with the specified key-value pair removed,
+    /// allowing further chained method calls.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use interface_rs::interface::Interface;
+    /// let builder = Interface::builder("eth0")
+    ///     .with_option("address", "192.168.1.100")
+    ///     .with_option("address", "192.168.1.101")
+    ///     .remove_option_value("address", "192.168.1.100");
+    ///
+    /// // The builder retains the option with the value "192.168.1.101" for "address",
+    /// // but the pair ("address", "192.168.1.100") is removed.
+    /// ```
+    pub fn remove_option_value(mut self, key: &str, value: &str) -> Self {
+        self.options.retain(|(k, v)| !(k == key && v == value));
+        self
+    }
+    
+
     /// Builds the [`Interface`] instance.
     ///
     /// # Returns
@@ -193,8 +255,42 @@ impl InterfaceBuilder {
             allow: self.allow,
             family: self.family,
             method: self.method,
-            options: self.options.into_iter().collect(),
+            options: self.options,
             mapping: self.mapping,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_remove_option() {
+        let iface = Interface::builder("eth0")
+            .with_option("address", "192.168.1.50")
+            .with_option("netmask", "255.255.255.0")
+            .with_option("address", "192.168.1.51") // Duplicate address key with different value
+            .remove_option("address") // Should remove all "address" options
+            .build();
+
+        assert_eq!(iface.options.len(), 1);
+        assert_eq!(iface.options[0], ("netmask".to_string(), "255.255.255.0".to_string()));
+    }
+
+    #[test]
+    fn test_remove_option_value() {
+        let iface = Interface::builder("eth0")
+            .with_option("address", "192.168.1.50")
+            .with_option("netmask", "255.255.255.0")
+            .with_option("address", "192.168.1.51") // Duplicate address key with different value
+            .with_option("address", "192.168.1.52") // Duplicate address key with different value
+            .remove_option_value("address", "192.168.1.50") // Should remove only this address pair
+            .build();
+    
+        assert_eq!(iface.options.len(), 3);
+        assert!(iface.options.contains(&("netmask".to_string(), "255.255.255.0".to_string())));
+        assert!(iface.options.contains(&("address".to_string(), "192.168.1.51".to_string())));
+        assert!(iface.options.contains(&("address".to_string(), "192.168.1.52".to_string())));
     }
 }
