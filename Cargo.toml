@@ -13,3 +13,4 @@ documentation = "https://docs.rs/interface-rs"
 readme = "README.md"
 
 [dependencies]
+natord = "1.0.9"

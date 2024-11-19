@@ -5,3 +5,12 @@ version = 3
 [[package]]
 name = "interface-rs"
 version = "0.2.6"
+dependencies = [
+ "natord",
+]
+
+[[package]]
+name = "natord"
+version = "1.0.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "308d96db8debc727c3fd9744aac51751243420e46edf401010908da7f8d5e57c"
