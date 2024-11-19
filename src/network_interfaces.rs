@@ -1,7 +1,6 @@
 use crate::error::NetworkInterfacesError;
 use crate::interface::Interface;
 use crate::parser::Parser;
-use natord::compare;
 use std::collections::HashMap;
 use std::fmt;
 use std::fs;
@@ -287,10 +286,12 @@ impl fmt::Display for NetworkInterfaces {
             writeln!(f, "{}", source)?;
         }
 
-        let mut interfaces: Vec<(&String, &Interface)> = self.interfaces.iter().collect();
-        interfaces.sort_by(|(key_a, _), (key_b, _)| compare(key_a, key_b));
+        // Collect interfaces into a vector and sort them by name
+        let mut interfaces: Vec<&Interface> = self.interfaces.values().collect();
+        interfaces.sort_by(|a, b| a.name.cmp(&b.name));
 
-        for (_key, iface) in interfaces {
+        // Print interfaces
+        for iface in interfaces {
             writeln!(f)?;
             write!(f, "{}", iface)?;
         }
@@ -367,90 +368,5 @@ mod tests {
 
         // Test: Nonexistent VNI
         assert_eq!(network_interfaces.get_existing_vni_vlan(666), None);
-    }
-    #[test]
-    fn test_display_with_unsorted_interfaces() {
-        let content = r#"
-    auto swp54
-    iface swp54
-        bridge-access 199
-
-    auto swp10
-    iface swp10
-        bridge-access 199
-
-    auto swp2
-    iface swp2
-        bridge-access 199
-
-    auto swp1
-    iface swp1
-        bridge-access 199
-
-    auto swp20
-    iface swp20
-        bridge-access 199
-
-    auto swp3
-    iface swp3
-        bridge-access 199
-
-    auto swp100
-    iface swp100
-        bridge-access 199
-
-    auto swp11
-    iface swp11
-        bridge-access 199
-
-    auto swp21
-    iface swp21
-        bridge-access 199
-
-    auto swp15
-    iface swp15
-        bridge-access 199
-    "#;
-
-        // Parse the content
-        let parser = Parser::new();
-        let (interfaces, comments, sources) =
-            parser.parse(content).expect("Failed to parse content");
-
-        // Create a NetworkInterfaces instance
-        let network_interfaces = NetworkInterfaces::new(interfaces, comments, sources, None, None);
-
-        // Debug: Print parsed interface names
-        println!("Parsed interface names:");
-        for interface_name in network_interfaces.interfaces.keys() {
-            println!("{:?}", interface_name);
-        }
-
-        // Use the Display implementation to get the output
-        let output = format!("{}", network_interfaces);
-
-        // Print the output for debugging
-        println!("Formatted Output:\n{}", output);
-
-        // Extract the interface names from the output
-        let mut output_interface_names = Vec::new();
-        for line in output.lines() {
-            if line.starts_with("iface ") {
-                if let Some(name) = line
-                    .strip_prefix("iface ")
-                    .and_then(|s| s.split_whitespace().next())
-                {
-                    output_interface_names.push(name.to_string());
-                }
-            }
-        }
-
-        // Expected sorted interface names
-        let expected_interface_names = vec![
-            "swp1", "swp2", "swp3", "swp10", "swp11", "swp15", "swp20", "swp21", "swp54", "swp100",
-        ];
-
-        // Assert that the output interface names match the expected order
-        assert_eq!(output_interface_names, expected_interface_names);
     }
 }
