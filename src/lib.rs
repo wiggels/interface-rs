@@ -25,25 +25,23 @@
 //! use interface_rs::NetworkInterfaces;
 //! use interface_rs::interface::{Interface, Family};
 //!
-//! fn main() -> std::io::Result<()> {
-//!     // Load the interfaces from a file
-//!     let mut net_ifaces = NetworkInterfaces::load("/path/to/interfaces")?;
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     // Load interfaces (replace with an existing file path during tests)
+//!     let mut net_ifaces = NetworkInterfaces::load("tests/interfaces")?;
 //!
-//!     // Retrieve and modify an existing interface using the builder pattern
+//!     // Retrieve and modify an existing interface
 //!     if let Some(iface) = net_ifaces.get_interface("eth0") {
 //!         let modified_iface = iface.edit()
 //!             .with_method("static")
+//!             .remove_option("address")
 //!             .with_option("address", "192.168.1.50")
 //!             .with_option("netmask", "255.255.255.0")
 //!             .build();
-//!
-//!         // Replace the existing interface with the modified one
 //!         net_ifaces.add_interface(modified_iface);
 //!     }
 //!
-//!     // Save changes back to the file
+//!     // Save changes
 //!     net_ifaces.save()?;
-//!
 //!     Ok(())
 //! }
 //! ```
@@ -54,21 +52,21 @@
 //! use interface_rs::NetworkInterfaces;
 //! use interface_rs::interface::{Interface, Family};
 //!
-//! fn main() -> std::io::Result<()> {
-//!     let mut net_ifaces = NetworkInterfaces::load("/path/to/interfaces")?;
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     // Load interfaces (replace with an existing file path during tests)
+//!     let mut net_ifaces = NetworkInterfaces::load("tests/interfaces")?;
 //!
 //!     // Create a new interface using the builder pattern
-//!     let new_iface = Interface::builder("swp1")
-//!         .with_auto(true)
-//!         .with_allow("hotplug")
-//!         .with_family(Family::Inet)
-//!         .with_method("static")
-//!         .with_option("address", "192.168.100.1")
-//!         .with_option("netmask", "255.255.255.0")
-//!         .build();
-//!
-//!     // Add the new interface to the collection
-//!     net_ifaces.add_interface(new_iface);
+//!     net_ifaces.add_interface(
+//!         Interface::builder("swp1")
+//!             .with_auto(true)
+//!             .with_allow("hotplug")
+//!             .with_family(Family::Inet)
+//!             .with_method("static")
+//!             .with_option("address", "192.168.100.1")
+//!             .with_option("netmask", "255.255.255.0")
+//!             .build()
+//!     );
 //!
 //!     // Save changes back to the file
 //!     net_ifaces.save()?;
@@ -82,8 +80,9 @@
 //! ```rust
 //! use interface_rs::NetworkInterfaces;
 //!
-//! fn main() -> std::io::Result<()> {
-//!     let mut net_ifaces = NetworkInterfaces::load("/path/to/interfaces")?;
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     // Load interfaces (replace with an existing file path during tests)
+//!     let mut net_ifaces = NetworkInterfaces::load("tests/interfaces")?;
 //!
 //!     // Delete an interface by name
 //!     net_ifaces.delete_interface("eth0");

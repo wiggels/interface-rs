@@ -126,15 +126,18 @@ impl Parser {
 
                     // Parse family
                     let family = match tokens.get(2) {
-                        Some(s) => Some(s.parse::<Family>().map_err(|e| ParserError {
-                            message: e.to_string(),
-                            line: Some(line_number + 1),
-                        })?),
+                        Some(s) => s.parse::<Family>().ok(),
                         None => None,
                     };
 
                     // Parse method
-                    let method = tokens.get(3).map(|s| s.to_string());
+                    let method = match tokens.len() {
+                        // If family is valid, method is the next token
+                        4 if family.is_some() => Some(tokens[3].to_string()),
+                        // If family is absent, interpret the third token as the method
+                        3 if family.is_none() => Some(tokens[2].to_string()),
+                        _ => None,
+                    };
 
                     if let Some(family) = family {
                         builder = builder.with_family(family);
