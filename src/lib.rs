@@ -101,6 +101,7 @@
 pub mod error;
 pub mod interface;
 pub mod network_interfaces;
+pub mod helper;
 mod parser;
 
 pub use error::NetworkInterfacesError;

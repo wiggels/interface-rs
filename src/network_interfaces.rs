@@ -1,6 +1,7 @@
 use crate::error::NetworkInterfacesError;
 use crate::interface::Interface;
 use crate::parser::Parser;
+use crate::helper::sort::natural;
 use std::collections::HashMap;
 use std::fmt;
 use std::fs;
@@ -223,27 +224,9 @@ impl NetworkInterfaces {
             }
         }
 
+        // Write to the file using Display implementation
         let mut file = fs::File::create(&path)?;
-
-        // Write comments at the top
-        for comment in &self.comments {
-            writeln!(file, "{}", comment)?;
-        }
-
-        // Write source directives
-        for source in &self.sources {
-            writeln!(file, "{}", source)?;
-        }
-
-        // Collect interfaces into a vector and sort them by name
-        let mut interfaces: Vec<&Interface> = self.interfaces.values().collect();
-        interfaces.sort_by(|a, b| a.name.cmp(&b.name));
-
-        // Write interfaces to file
-        for iface in interfaces {
-            writeln!(file)?;
-            write!(file, "{}", iface)?;
-        }
+        write!(file, "{}", self)?;
 
         // Update last_modified
         self.last_modified = Some(SystemTime::now());
@@ -288,7 +271,7 @@ impl fmt::Display for NetworkInterfaces {
 
         // Collect interfaces into a vector and sort them by name
         let mut interfaces: Vec<&Interface> = self.interfaces.values().collect();
-        interfaces.sort_by(|a, b| a.name.cmp(&b.name));
+        interfaces.sort_by(|a, b| natural(&a.name, &b.name));
 
         // Print interfaces
         for iface in interfaces {
