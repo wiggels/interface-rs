@@ -1,6 +1,6 @@
 [package]
 name = "interface-rs"
-version = "0.2.8"
+version = "0.2.9"
 authors = ["Hunter Wigelsworth <wiggels@gmail.com>"]
 edition = "2021"
 description = "Library for reading and writing Linux interfaces(5) files"
