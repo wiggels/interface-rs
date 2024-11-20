@@ -199,6 +199,25 @@ impl NetworkInterfaces {
         None // No `bridge-access` option or invalid value
     }
 
+    /// Retrieves all port names that have a `bridge-access` option defined.
+    ///
+    /// # Returns
+    ///
+    /// A `Vec<String>` containing the names of the ports with `bridge-access` defined.
+    pub fn get_bridge_interfaces(&self) -> Vec<String> {
+        self.interfaces
+            .iter()
+            .filter_map(|(name, iface)| {
+                for (key, _) in &iface.options {
+                    if key == "bridge-access" {
+                        return Some(name.clone());
+                    }
+                }
+                None
+            })
+            .collect()
+    }
+
     /// Saves changes back to the `interfaces(5)` file.
     ///
     /// # Errors
@@ -351,5 +370,35 @@ mod tests {
 
         // Test: Nonexistent VNI
         assert_eq!(network_interfaces.get_existing_vni_vlan(666), None);
+    }
+
+    #[test]
+    fn test_get_bridge_interfaces() {
+        let mut network_interfaces = NetworkInterfaces {
+            interfaces: HashMap::new(),
+            path: None,
+            last_modified: None,
+            comments: Vec::new(),
+            sources: Vec::new(),
+        };
+
+        // Add interfaces with `bridge-access`
+        network_interfaces.add_interface(
+            Interface::builder("vni1234")
+                .with_option("bridge-access", "1000")
+                .build(),
+        );
+        network_interfaces.add_interface(
+            Interface::builder("swp2")
+                .with_option("bridge-access", "1001")
+                .build(),
+        );
+
+        // Add an interface without `bridge-access`
+        network_interfaces.add_interface(Interface::builder("swp1").build());
+
+        // Verify the result
+        let bridge_interfaces = network_interfaces.get_bridge_interfaces();
+        assert_eq!(bridge_interfaces, vec!["swp2", "vni1234"]);
     }
 }
