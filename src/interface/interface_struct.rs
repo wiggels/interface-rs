@@ -1,4 +1,4 @@
-use super::{Family, InterfaceBuilder, Mapping};
+use super::{Family, InterfaceBuilder, Mapping, Method};
 use std::fmt;
 
 /// Represents a network interface configuration in an `interfaces(5)` file.
@@ -16,13 +16,13 @@ use std::fmt;
 /// Creating a new `Interface` using the builder pattern:
 ///
 /// ```rust
-/// use interface_rs::interface::{Interface, Family};
+/// use interface_rs::interface::{Interface, Family, Method};
 ///
 /// let iface = Interface::builder("eth0")
 ///     .with_auto(true)
 ///     .with_allow("hotplug")
 ///     .with_family(Family::Inet)
-///     .with_method("dhcp")
+///     .with_method(Method::Dhcp)
 ///     .with_option("mtu", "1500")
 ///     .build();
 /// ```
@@ -36,8 +36,8 @@ pub struct Interface {
     pub allow: Vec<String>,
     /// The address family (e.g., `inet`).
     pub family: Option<Family>,
-    /// The method of configuration (e.g., `"static"`, `"dhcp"`).
-    pub method: Option<String>,
+    /// The method of configuration (e.g., `static`, `dhcp`).
+    pub method: Option<Method>,
     /// A list of options specified under the `iface` stanza.
     pub options: Vec<(String, String)>,
     /// Optional mapping configuration for the interface.
@@ -69,17 +69,17 @@ impl Interface {
     /// # Examples
     ///
     /// ```rust
-    /// use interface_rs::interface::{Interface, Family};
+    /// use interface_rs::interface::{Interface, Family, Method};
     ///
     /// let iface = Interface::builder("eth0")
     ///     .with_auto(true)
     ///     .with_family(Family::Inet)
-    ///     .with_method("dhcp")
+    ///     .with_method(Method::Dhcp)
     ///     .build();
     ///
     /// // Modify the existing interface
     /// let modified_iface = iface.edit()
-    ///     .with_method("static")
+    ///     .with_method(Method::Static)
     ///     .with_option("address", "192.168.1.50")
     ///     .build();
     /// ```

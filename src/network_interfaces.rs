@@ -20,13 +20,13 @@ use std::time::SystemTime;
 ///
 /// ```rust
 /// use interface_rs::NetworkInterfaces;
-/// use interface_rs::interface::Interface;
+/// use interface_rs::interface::{Interface, Method};
 ///
 /// let mut net_ifaces = NetworkInterfaces::load("tests/interfaces").unwrap();
 ///
 /// // Modify an interface
 /// if let Some(iface) = net_ifaces.get_interface_mut("eth0") {
-///     iface.method = Some("static".to_string());
+///     iface.method = Some(Method::Static);
 ///     iface.options.push(("address".to_string(), "192.168.1.100".to_string()));
 /// }
 ///
@@ -397,8 +397,9 @@ mod tests {
         // Add an interface without `bridge-access`
         network_interfaces.add_interface(Interface::builder("swp1").build());
 
-        // Verify the result
-        let bridge_interfaces = network_interfaces.get_bridge_interfaces();
+        // Verify the result (sort for deterministic comparison)
+        let mut bridge_interfaces = network_interfaces.get_bridge_interfaces();
+        bridge_interfaces.sort();
         assert_eq!(bridge_interfaces, vec!["swp2", "vni1234"]);
     }
 }

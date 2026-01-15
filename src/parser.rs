@@ -1,5 +1,5 @@
 use crate::error::ParserError;
-use crate::interface::{Family, Interface};
+use crate::interface::{Family, Interface, Method};
 use std::collections::HashMap;
 
 /// A parser for an `interfaces(5)` file.
@@ -131,11 +131,11 @@ impl Parser {
                     };
 
                     // Parse method
-                    let method = match tokens.len() {
+                    let method: Option<Method> = match tokens.len() {
                         // If family is valid, method is the next token
-                        4 if family.is_some() => Some(tokens[3].to_string()),
+                        4 if family.is_some() => Some(tokens[3].parse().unwrap()),
                         // If family is absent, interpret the third token as the method
-                        3 if family.is_none() => Some(tokens[2].to_string()),
+                        3 if family.is_none() => Some(tokens[2].parse().unwrap()),
                         _ => None,
                     };
 
@@ -181,7 +181,7 @@ impl Parser {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::interface::Family;
+    use crate::interface::{Family, Method};
 
     #[test]
     fn test_parse_iface_without_family_and_method() {
@@ -220,7 +220,7 @@ iface eth1 inet static
         let iface = &interfaces["eth1"];
         assert_eq!(iface.name, "eth1");
         assert_eq!(iface.family, Some(Family::Inet));
-        assert_eq!(iface.method.as_deref(), Some("static"));
+        assert_eq!(iface.method, Some(Method::Static));
         assert!(iface
             .options
             .contains(&("address".to_string(), "192.168.1.10".to_string())));
@@ -251,23 +251,23 @@ iface wlan0 inet static
         // Check 'lo' interface
         let lo_iface = &interfaces["lo"];
         assert_eq!(lo_iface.name, "lo");
-        assert_eq!(lo_iface.auto, true);
+        assert!(lo_iface.auto);
         assert_eq!(lo_iface.family, Some(Family::Inet));
-        assert_eq!(lo_iface.method.as_deref(), Some("loopback"));
+        assert_eq!(lo_iface.method, Some(Method::Loopback));
 
         // Check 'eth0' interface
         let eth0_iface = &interfaces["eth0"];
         assert_eq!(eth0_iface.name, "eth0");
-        assert_eq!(eth0_iface.auto, true);
+        assert!(eth0_iface.auto);
         assert_eq!(eth0_iface.family, Some(Family::Inet));
-        assert_eq!(eth0_iface.method.as_deref(), Some("dhcp"));
+        assert_eq!(eth0_iface.method, Some(Method::Dhcp));
 
         // Check 'wlan0' interface
         let wlan0_iface = &interfaces["wlan0"];
         assert_eq!(wlan0_iface.name, "wlan0");
-        assert_eq!(wlan0_iface.auto, true);
+        assert!(wlan0_iface.auto);
         assert_eq!(wlan0_iface.family, Some(Family::Inet));
-        assert_eq!(wlan0_iface.method.as_deref(), Some("static"));
+        assert_eq!(wlan0_iface.method, Some(Method::Static));
         assert!(wlan0_iface
             .options
             .contains(&("address".to_string(), "192.168.0.100".to_string())));
@@ -297,23 +297,23 @@ iface wlan0 inet static
         // Check 'lo' interface
         let lo_iface = &interfaces["lo"];
         assert_eq!(lo_iface.name, "lo");
-        assert_eq!(lo_iface.auto, true);
+        assert!(lo_iface.auto);
         assert_eq!(lo_iface.family, Some(Family::Inet));
-        assert_eq!(lo_iface.method.as_deref(), Some("loopback"));
+        assert_eq!(lo_iface.method, Some(Method::Loopback));
 
         // Check 'eth0' interface
         let eth0_iface = &interfaces["eth0"];
         assert_eq!(eth0_iface.name, "eth0");
-        assert_eq!(eth0_iface.auto, true);
+        assert!(eth0_iface.auto);
         assert_eq!(eth0_iface.family, Some(Family::Inet));
-        assert_eq!(eth0_iface.method.as_deref(), Some("dhcp"));
+        assert_eq!(eth0_iface.method, Some(Method::Dhcp));
 
         // Check 'wlan0' interface
         let wlan0_iface = &interfaces["wlan0"];
         assert_eq!(wlan0_iface.name, "wlan0");
-        assert_eq!(wlan0_iface.auto, true);
+        assert!(wlan0_iface.auto);
         assert_eq!(wlan0_iface.family, Some(Family::Inet));
-        assert_eq!(wlan0_iface.method.as_deref(), Some("static"));
+        assert_eq!(wlan0_iface.method, Some(Method::Static));
         assert!(wlan0_iface
             .options
             .contains(&("address".to_string(), "192.168.0.100".to_string())));

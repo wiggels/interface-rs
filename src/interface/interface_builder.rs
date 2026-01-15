@@ -1,4 +1,4 @@
-use super::{Family, Interface, Mapping};
+use super::{Family, Interface, Mapping, Method};
 
 /// A builder for constructing [`Interface`] instances.
 ///
@@ -9,13 +9,13 @@ use super::{Family, Interface, Mapping};
 /// # Examples
 ///
 /// ```rust
-/// use interface_rs::interface::{Interface, Family};
+/// use interface_rs::interface::{Interface, Family, Method};
 ///
 /// let iface = Interface::builder("eth0")
 ///     .with_auto(true)
 ///     .with_allow("hotplug")
 ///     .with_family(Family::Inet)
-///     .with_method("dhcp")
+///     .with_method(Method::Dhcp)
 ///     .with_option("mtu", "1500")
 ///     .build();
 /// ```
@@ -25,7 +25,7 @@ pub struct InterfaceBuilder {
     pub(crate) auto: bool,
     pub(crate) allow: Vec<String>,
     pub(crate) family: Option<Family>,
-    pub(crate) method: Option<String>,
+    pub(crate) method: Option<Method>,
     pub(crate) options: Vec<(String, String)>,
     pub(crate) mapping: Option<Mapping>,
 }
@@ -114,17 +114,17 @@ impl InterfaceBuilder {
     ///
     /// # Arguments
     ///
-    /// * `method` - A string representing the method (e.g., `"static"`, `"dhcp"`).
+    /// * `method` - The [`Method`] of configuration (e.g., `Method::Static`, `Method::Dhcp`).
     ///
     /// # Examples
     ///
     /// ```rust
-    /// # use interface_rs::interface::Interface;
+    /// use interface_rs::interface::{Interface, Method};
     /// let builder = Interface::builder("eth0")
-    ///     .with_method("dhcp");
+    ///     .with_method(Method::Dhcp);
     /// ```
-    pub fn with_method(mut self, method: impl Into<String>) -> Self {
-        self.method = Some(method.into());
+    pub fn with_method(mut self, method: Method) -> Self {
+        self.method = Some(method);
         self
     }
 
@@ -240,11 +240,11 @@ impl InterfaceBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use interface_rs::interface::{Interface, Family};
+    /// use interface_rs::interface::{Interface, Family, Method};
     /// let iface = Interface::builder("eth0")
     ///     .with_auto(true)
     ///     .with_family(Family::Inet)
-    ///     .with_method("dhcp")
+    ///     .with_method(Method::Dhcp)
     ///     .build();
     /// ```
     pub fn build(self) -> Interface {

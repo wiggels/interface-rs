@@ -23,7 +23,7 @@
 //!
 //! ```rust
 //! use interface_rs::NetworkInterfaces;
-//! use interface_rs::interface::{Interface, Family};
+//! use interface_rs::interface::{Interface, Family, Method};
 //!
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     // Load interfaces (replace with an existing file path during tests)
@@ -32,7 +32,7 @@
 //!     // Retrieve and modify an existing interface
 //!     if let Some(iface) = net_ifaces.get_interface("eth0") {
 //!         let modified_iface = iface.edit()
-//!             .with_method("static")
+//!             .with_method(Method::Static)
 //!             .remove_option("address")
 //!             .with_option("address", "192.168.1.50")
 //!             .with_option("netmask", "255.255.255.0")
@@ -50,7 +50,7 @@
 //!
 //! ```rust
 //! use interface_rs::NetworkInterfaces;
-//! use interface_rs::interface::{Interface, Family};
+//! use interface_rs::interface::{Interface, Family, Method};
 //!
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     // Load interfaces (replace with an existing file path during tests)
@@ -62,7 +62,7 @@
 //!             .with_auto(true)
 //!             .with_allow("hotplug")
 //!             .with_family(Family::Inet)
-//!             .with_method("static")
+//!             .with_method(Method::Static)
 //!             .with_option("address", "192.168.100.1")
 //!             .with_option("netmask", "255.255.255.0")
 //!             .build()
@@ -105,5 +105,5 @@ pub mod helper;
 mod parser;
 
 pub use error::NetworkInterfacesError;
-pub use interface::{Family, Interface, InterfaceBuilder, Mapping};
+pub use interface::{Family, Interface, InterfaceBuilder, Mapping, Method};
 pub use network_interfaces::NetworkInterfaces;
