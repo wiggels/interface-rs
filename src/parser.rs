@@ -491,4 +491,66 @@ iface vlan101
 
         assert_eq!(output, expected_output);
     }
+
+    #[test]
+    fn test_parse_comments_and_sources() {
+        let content = r#"# This is a comment
+# Another comment at the top
+source /etc/network/interfaces.d/*
+source-directory /etc/network/interfaces.d
+
+auto lo
+iface lo inet loopback
+"#;
+        let parser = Parser::new();
+        let (interfaces, comments, sources) = parser.parse(content).unwrap();
+
+        assert_eq!(comments.len(), 2);
+        assert_eq!(comments[0], "# This is a comment");
+        assert_eq!(comments[1], "# Another comment at the top");
+
+        assert_eq!(sources.len(), 2);
+        assert_eq!(sources[0], "source /etc/network/interfaces.d/*");
+        assert_eq!(sources[1], "source-directory /etc/network/interfaces.d");
+
+        assert_eq!(interfaces.len(), 1);
+        assert!(interfaces.contains_key("lo"));
+    }
+
+    #[test]
+    fn test_parse_allow_hotplug() {
+        let content = r#"
+auto eth0
+allow-hotplug eth0
+iface eth0 inet dhcp
+"#;
+        let parser = Parser::new();
+        let (interfaces, _comments, _sources) = parser.parse(content).unwrap();
+
+        let eth0 = &interfaces["eth0"];
+        assert!(eth0.auto);
+        assert_eq!(eth0.allow, vec!["hotplug"]);
+        assert_eq!(eth0.method, Some(Method::Dhcp));
+    }
+
+    #[test]
+    fn test_parse_empty_content() {
+        let parser = Parser::new();
+        let (interfaces, comments, sources) = parser.parse("").unwrap();
+
+        assert!(interfaces.is_empty());
+        assert!(comments.is_empty());
+        assert!(sources.is_empty());
+    }
+
+    #[test]
+    fn test_parse_only_comments() {
+        let content = "# Just a comment\n# And another";
+        let parser = Parser::new();
+        let (interfaces, comments, sources) = parser.parse(content).unwrap();
+
+        assert!(interfaces.is_empty());
+        assert_eq!(comments.len(), 2);
+        assert!(sources.is_empty());
+    }
 }

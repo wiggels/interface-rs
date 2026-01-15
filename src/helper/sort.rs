@@ -71,7 +71,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_sort_natural() {
+    fn test_sort_natural_basic() {
         assert_eq!(natural("swp1", "swp2"), Ordering::Less);
         assert_eq!(natural("swp10", "swp2"), Ordering::Greater);
         assert_eq!(natural("swp10", "swp10"), Ordering::Equal);
@@ -79,5 +79,42 @@ mod tests {
         assert_eq!(natural("swp2", "swp2"), Ordering::Equal);
         assert_eq!(natural("swp10s1", "swp10s2"), Ordering::Less);
         assert_eq!(natural("swp10", "swp9s1"), Ordering::Greater);
+    }
+
+    #[test]
+    fn test_sort_natural_different_prefixes() {
+        assert_eq!(natural("eth0", "swp0"), Ordering::Less);
+        assert_eq!(natural("lo", "eth0"), Ordering::Greater);
+        assert_eq!(natural("bridge", "bond0"), Ordering::Greater);
+    }
+
+    #[test]
+    fn test_sort_natural_vlan_interfaces() {
+        assert_eq!(natural("vlan1", "vlan2"), Ordering::Less);
+        assert_eq!(natural("vlan10", "vlan9"), Ordering::Greater);
+        assert_eq!(natural("vlan100", "vlan1000"), Ordering::Less);
+    }
+
+    #[test]
+    fn test_sort_natural_empty_and_numeric() {
+        assert_eq!(natural("", ""), Ordering::Equal);
+        assert_eq!(natural("a", ""), Ordering::Greater);
+        assert_eq!(natural("", "a"), Ordering::Less);
+        assert_eq!(natural("1", "2"), Ordering::Less);
+        assert_eq!(natural("10", "2"), Ordering::Greater);
+    }
+
+    #[test]
+    fn test_sort_natural_leading_zeros() {
+        // Leading zeros should be treated as the same number
+        assert_eq!(natural("swp01", "swp1"), Ordering::Equal);
+        assert_eq!(natural("swp001", "swp1"), Ordering::Equal);
+    }
+
+    #[test]
+    fn test_sort_vec() {
+        let mut interfaces = vec!["swp10", "swp2", "swp1", "eth0", "lo", "swp20"];
+        interfaces.sort_by(|a, b| natural(a, b));
+        assert_eq!(interfaces, vec!["eth0", "lo", "swp1", "swp2", "swp10", "swp20"]);
     }
 }

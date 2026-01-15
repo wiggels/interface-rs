@@ -82,3 +82,40 @@ impl fmt::Display for FamilyParseError {
 }
 
 impl Error for FamilyParseError {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_family_from_str() {
+        assert_eq!(Family::from_str("inet").unwrap(), Family::Inet);
+        assert_eq!(Family::from_str("inet6").unwrap(), Family::Inet6);
+        assert_eq!(Family::from_str("ipx").unwrap(), Family::IpX);
+        assert_eq!(Family::from_str("can").unwrap(), Family::Can);
+    }
+
+    #[test]
+    fn test_family_from_str_invalid() {
+        let err = Family::from_str("invalid").unwrap_err();
+        assert_eq!(err.0, "invalid");
+        assert_eq!(err.to_string(), "Invalid family: invalid");
+    }
+
+    #[test]
+    fn test_family_display() {
+        assert_eq!(Family::Inet.to_string(), "inet");
+        assert_eq!(Family::Inet6.to_string(), "inet6");
+        assert_eq!(Family::IpX.to_string(), "ipx");
+        assert_eq!(Family::Can.to_string(), "can");
+    }
+
+    #[test]
+    fn test_family_roundtrip() {
+        for family in [Family::Inet, Family::Inet6, Family::IpX, Family::Can] {
+            let s = family.to_string();
+            let parsed: Family = s.parse().unwrap();
+            assert_eq!(parsed, family);
+        }
+    }
+}
