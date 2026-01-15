@@ -13,8 +13,6 @@ pub enum NetworkInterfacesError {
     Parser(ParserError),
     /// An error occurred while parsing the `Family` enum.
     FamilyParse(FamilyParseError),
-    /// An error occurred while parsing the `Method` enum.
-    MethodParse(MethodParseError),
     /// The interfaces file has been modified on disk since it was last loaded.
     FileModified,
     /// A catch-all for other errors.
@@ -27,7 +25,6 @@ impl fmt::Display for NetworkInterfacesError {
             NetworkInterfacesError::Io(err) => write!(f, "I/O error: {}", err),
             NetworkInterfacesError::Parser(err) => write!(f, "Parser error: {}", err),
             NetworkInterfacesError::FamilyParse(err) => write!(f, "Family parse error: {}", err),
-            NetworkInterfacesError::MethodParse(err) => write!(f, "Method parse error: {}", err),
             NetworkInterfacesError::FileModified => write!(
                 f,
                 "The interfaces file has been modified on disk since it was last loaded."
@@ -43,14 +40,12 @@ impl Error for NetworkInterfacesError {
             NetworkInterfacesError::Io(err) => Some(err),
             NetworkInterfacesError::Parser(err) => Some(err),
             NetworkInterfacesError::FamilyParse(err) => Some(err),
-            NetworkInterfacesError::MethodParse(err) => Some(err),
             NetworkInterfacesError::FileModified => None,
             NetworkInterfacesError::Other(_) => None,
         }
     }
 }
 
-// Implement conversions from underlying error types to NetworkInterfacesError
 impl From<io::Error> for NetworkInterfacesError {
     fn from(err: io::Error) -> Self {
         NetworkInterfacesError::Io(err)
@@ -66,12 +61,6 @@ impl From<ParserError> for NetworkInterfacesError {
 impl From<FamilyParseError> for NetworkInterfacesError {
     fn from(err: FamilyParseError) -> Self {
         NetworkInterfacesError::FamilyParse(err)
-    }
-}
-
-impl From<MethodParseError> for NetworkInterfacesError {
-    fn from(err: MethodParseError) -> Self {
-        NetworkInterfacesError::MethodParse(err)
     }
 }
 
@@ -107,15 +96,3 @@ impl fmt::Display for FamilyParseError {
 }
 
 impl Error for FamilyParseError {}
-
-/// Represents errors that can occur when parsing the `Method` enum.
-#[derive(Debug, Clone)]
-pub struct MethodParseError(pub String);
-
-impl fmt::Display for MethodParseError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Invalid method: {}", self.0)
-    }
-}
-
-impl Error for MethodParseError {}
