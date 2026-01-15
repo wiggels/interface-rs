@@ -182,21 +182,8 @@ impl NetworkInterfaces {
     ///   the interface does not exist or the option is not present.
     pub fn get_existing_vni_vlan(&self, vni_id: u32) -> Option<u16> {
         let vni_name = format!("vni{}", vni_id);
-
-        // Check if the interface exists
         let interface = self.interfaces.get(&vni_name)?;
-
-        // Look for the `bridge-access` option
-        for (key, value) in &interface.options {
-            if key == "bridge-access" {
-                // Try to parse the value as a u16
-                if let Ok(vlan_id) = value.parse::<u16>() {
-                    return Some(vlan_id);
-                }
-            }
-        }
-
-        None // No `bridge-access` option or invalid value
+        interface.get_option("bridge-access")?.parse().ok()
     }
 
     /// Retrieves all port names that have a `bridge-access` option defined.
@@ -208,12 +195,7 @@ impl NetworkInterfaces {
         self.interfaces
             .iter()
             .filter_map(|(name, iface)| {
-                for (key, _) in &iface.options {
-                    if key == "bridge-access" {
-                        return Some(name.clone());
-                    }
-                }
-                None
+                iface.get_option("bridge-access").map(|_| name.clone())
             })
             .collect()
     }

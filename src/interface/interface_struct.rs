@@ -94,6 +94,72 @@ impl Interface {
             mapping: self.mapping.clone(),
         }
     }
+
+    /// Returns the first value for the given option key.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The option name to look up (e.g., `"address"`, `"netmask"`).
+    ///
+    /// # Returns
+    ///
+    /// `Some(&str)` if the option exists, `None` otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use interface_rs::interface::{Interface, Method};
+    ///
+    /// let iface = Interface::builder("eth0")
+    ///     .with_method(Method::Static)
+    ///     .with_option("address", "192.168.1.100")
+    ///     .with_option("netmask", "255.255.255.0")
+    ///     .build();
+    ///
+    /// assert_eq!(iface.get_option("address"), Some("192.168.1.100"));
+    /// assert_eq!(iface.get_option("gateway"), None);
+    /// ```
+    pub fn get_option(&self, key: &str) -> Option<&str> {
+        self.options
+            .iter()
+            .find(|(k, _)| k == key)
+            .map(|(_, v)| v.as_str())
+    }
+
+    /// Returns all values for the given option key.
+    ///
+    /// Some options like `address` can appear multiple times. This method
+    /// returns all values for a given key.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The option name to look up.
+    ///
+    /// # Returns
+    ///
+    /// A `Vec` of string slices containing all values for the key.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use interface_rs::interface::{Interface, Method};
+    ///
+    /// let iface = Interface::builder("eth0")
+    ///     .with_method(Method::Static)
+    ///     .with_option("address", "192.168.1.100")
+    ///     .with_option("address", "192.168.1.101")
+    ///     .build();
+    ///
+    /// let addresses = iface.get_options("address");
+    /// assert_eq!(addresses, vec!["192.168.1.100", "192.168.1.101"]);
+    /// ```
+    pub fn get_options(&self, key: &str) -> Vec<&str> {
+        self.options
+            .iter()
+            .filter(|(k, _)| k == key)
+            .map(|(_, v)| v.as_str())
+            .collect()
+    }
 }
 
 impl fmt::Display for Interface {
