@@ -1,3 +1,4 @@
+use crate::interface::FamilyParseError;
 use std::error::Error;
 use std::fmt;
 use std::io;
@@ -84,15 +85,3 @@ impl fmt::Display for ParserError {
 }
 
 impl Error for ParserError {}
-
-/// Represents errors that can occur when parsing the `Family` enum.
-#[derive(Debug, Clone)]
-pub struct FamilyParseError(pub String);
-
-impl fmt::Display for FamilyParseError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Invalid family: {}", self.0)
-    }
-}
-
-impl Error for FamilyParseError {}
