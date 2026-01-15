@@ -114,10 +114,7 @@ impl Parser {
                     // Start a new interface
                     let iface_name = tokens
                         .get(1)
-                        .ok_or_else(|| ParserError {
-                            message: "Missing interface name in 'iface' stanza".to_string(),
-                            line: Some(line_number + 1),
-                        })?
+                        .ok_or_else(|| ParserError::new("Missing interface name in 'iface' stanza", line_number + 1))?
                         .to_string();
 
                     // Remove existing interface if any
