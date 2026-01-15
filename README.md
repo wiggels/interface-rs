@@ -36,6 +36,7 @@ This library provides structs and functions to load, parse, modify, and save net
 - **Save** changes back to the file system.
 - **Fluent API** using the builder pattern for creating and modifying interfaces.
 - **Display** interfaces in the correct `interfaces(5)` file format.
+- **Type-safe** enums for address families (`Family`) and configuration methods (`Method`).
 
 ---
 
@@ -45,7 +46,7 @@ Add `interface-rs` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-interface-rs = "0.2.0"
+interface-rs = "0.2"
 ```
 
 Then run:
@@ -63,13 +64,13 @@ cargo build
 ```rust
 use interface_rs::NetworkInterfaces;
 
-fn main() -> std::io::Result<()> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Load the interfaces file
-    let net_ifaces = NetworkInterfaces::load("/path/to/interfaces")?;
+    let net_ifaces = NetworkInterfaces::load("/etc/network/interfaces")?;
 
     // Iterate over interfaces
-    for iface in net_ifaces.interfaces.values() {
-        println!("Found interface: {}", iface.name);
+    for (name, iface) in net_ifaces.iter() {
+        println!("Found interface: {}", name);
     }
 
     Ok(())
@@ -81,8 +82,8 @@ fn main() -> std::io::Result<()> {
 ```rust
 use interface_rs::NetworkInterfaces;
 
-fn main() -> std::io::Result<()> {
-    let net_ifaces = NetworkInterfaces::load("/path/to/interfaces")?;
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let net_ifaces = NetworkInterfaces::load("/etc/network/interfaces")?;
 
     // Get a specific interface
     if let Some(iface) = net_ifaces.get_interface("eth0") {
@@ -101,17 +102,17 @@ fn main() -> std::io::Result<()> {
 
 ```rust
 use interface_rs::NetworkInterfaces;
-use interface_rs::interface::{Interface, Family};
+use interface_rs::interface::{Interface, Family, Method};
 
-fn main() -> std::io::Result<()> {
-    let mut net_ifaces = NetworkInterfaces::load("/path/to/interfaces")?;
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut net_ifaces = NetworkInterfaces::load("/etc/network/interfaces")?;
 
     // Create a new interface using the builder pattern
     let new_iface = Interface::builder("swp1")
         .with_auto(true)
         .with_allow("hotplug")
         .with_family(Family::Inet)
-        .with_method("static")
+        .with_method(Method::Static)
         .with_option("address", "192.168.100.1")
         .with_option("netmask", "255.255.255.0")
         .build();
@@ -130,15 +131,15 @@ fn main() -> std::io::Result<()> {
 
 ```rust
 use interface_rs::NetworkInterfaces;
-use interface_rs::interface::{Interface, Family};
+use interface_rs::interface::{Interface, Family, Method};
 
-fn main() -> std::io::Result<()> {
-    let mut net_ifaces = NetworkInterfaces::load("/path/to/interfaces")?;
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut net_ifaces = NetworkInterfaces::load("/etc/network/interfaces")?;
 
     // Retrieve and modify an existing interface using the builder pattern
     if let Some(iface) = net_ifaces.get_interface("eth0") {
         let modified_iface = iface.edit()
-            .with_method("static")
+            .with_method(Method::Static)
             .with_option("address", "192.168.1.50")
             .with_option("netmask", "255.255.255.0")
             .build();
@@ -161,8 +162,8 @@ fn main() -> std::io::Result<()> {
 ```rust
 use interface_rs::NetworkInterfaces;
 
-fn main() -> std::io::Result<()> {
-    let mut net_ifaces = NetworkInterfaces::load("/path/to/interfaces")?;
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut net_ifaces = NetworkInterfaces::load("/etc/network/interfaces")?;
 
     // Delete an interface by name
     net_ifaces.delete_interface("eth0");
@@ -181,8 +182,8 @@ fn main() -> std::io::Result<()> {
 ```rust
 use interface_rs::NetworkInterfaces;
 
-fn main() -> std::io::Result<()> {
-    let mut net_ifaces = NetworkInterfaces::load("/path/to/interfaces")?;
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut net_ifaces = NetworkInterfaces::load("/etc/network/interfaces")?;
 
     // Make changes to interfaces...
 
@@ -194,6 +195,29 @@ fn main() -> std::io::Result<()> {
     Ok(())
 }
 ```
+
+---
+
+## Supported Configuration
+
+### Address Families
+
+The library supports all standard address families defined in `interfaces(5)`:
+
+- `Family::Inet` - IPv4 networking
+- `Family::Inet6` - IPv6 networking
+- `Family::IpX` - IPX networking
+- `Family::Can` - CAN (Controller Area Network)
+
+### Configuration Methods
+
+Common methods are provided as enum variants for type safety:
+
+- `Method::Static` - Static IP configuration
+- `Method::Dhcp` - DHCP client configuration
+- `Method::Loopback` - Loopback interface
+- `Method::Manual` - Manual configuration
+- `Method::Other(String)` - Any other method (e.g., `ppp`, `tunnel`, `bootp`)
 
 ---
 
