@@ -96,7 +96,8 @@ impl Parser {
                     }
                 }
                 s if s.starts_with("allow-") => {
-                    let allow_type = s.strip_prefix("allow-").unwrap();
+                    // Safe: we just verified the prefix exists with starts_with
+                    let allow_type = s.strip_prefix("allow-").expect("prefix verified above");
                     for &iface_name in &tokens[1..] {
                         if let Some(iface) = interfaces.get_mut(iface_name) {
                             // If interface exists, add to allow list
@@ -135,12 +136,12 @@ impl Parser {
                         None => None,
                     };
 
-                    // Parse method
+                    // Parse method (Method::from_str is infallible - unwrap cannot panic)
                     let method: Option<Method> = match tokens.len() {
                         // If family is valid, method is the next token
-                        4 if family.is_some() => Some(tokens[3].parse().unwrap()),
+                        4 if family.is_some() => Some(tokens[3].parse().expect("Method parse is infallible")),
                         // If family is absent, interpret the third token as the method
-                        3 if family.is_none() => Some(tokens[2].parse().unwrap()),
+                        3 if family.is_none() => Some(tokens[2].parse().expect("Method parse is infallible")),
                         _ => None,
                     };
 
