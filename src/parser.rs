@@ -1,5 +1,5 @@
 use crate::error::ParserError;
-use crate::interface::{Family, Interface, Method};
+use crate::interface::{Family, Interface, InterfaceOption, Method};
 use std::collections::HashMap;
 
 /// A parser for an `interfaces(5)` file.
@@ -162,7 +162,7 @@ impl Parser {
                         let mut tokens = line.split_whitespace();
                         if let Some(option_name) = tokens.next() {
                             let option_value = tokens.collect::<Vec<&str>>().join(" ");
-                            iface.options.push((option_name.to_string(), option_value));
+                            iface.options.push(InterfaceOption::from_key_value(option_name, &option_value));
                         }
                     } else {
                         // Handle global options if needed
@@ -201,13 +201,12 @@ iface eth0
         assert_eq!(iface.name, "eth0");
         assert_eq!(iface.family, None);
         assert_eq!(iface.method, None);
-        assert!(iface.options.contains(&(
-            "address".to_string(),
+        assert!(iface.options.contains(&InterfaceOption::Address(
             "10.130.17.36/255.255.255.128".to_string()
         )));
         assert!(iface
             .options
-            .contains(&("vrf".to_string(), "mgmt".to_string())));
+            .contains(&InterfaceOption::Vrf("mgmt".to_string())));
     }
 
     #[test]
@@ -226,10 +225,10 @@ iface eth1 inet static
         assert_eq!(iface.method, Some(Method::Static));
         assert!(iface
             .options
-            .contains(&("address".to_string(), "192.168.1.10".to_string())));
+            .contains(&InterfaceOption::Address("192.168.1.10".to_string())));
         assert!(iface
             .options
-            .contains(&("netmask".to_string(), "255.255.255.0".to_string())));
+            .contains(&InterfaceOption::Netmask("255.255.255.0".to_string())));
     }
 
     #[test]
@@ -273,10 +272,10 @@ iface wlan0 inet static
         assert_eq!(wlan0_iface.method, Some(Method::Static));
         assert!(wlan0_iface
             .options
-            .contains(&("address".to_string(), "192.168.0.100".to_string())));
+            .contains(&InterfaceOption::Address("192.168.0.100".to_string())));
         assert!(wlan0_iface
             .options
-            .contains(&("netmask".to_string(), "255.255.255.0".to_string())));
+            .contains(&InterfaceOption::Netmask("255.255.255.0".to_string())));
     }
 
     #[test]
@@ -319,10 +318,10 @@ iface wlan0 inet static
         assert_eq!(wlan0_iface.method, Some(Method::Static));
         assert!(wlan0_iface
             .options
-            .contains(&("address".to_string(), "192.168.0.100".to_string())));
+            .contains(&InterfaceOption::Address("192.168.0.100".to_string())));
         assert!(wlan0_iface
             .options
-            .contains(&("netmask".to_string(), "255.255.255.0".to_string())));
+            .contains(&InterfaceOption::Netmask("255.255.255.0".to_string())));
     }
 
     #[test]
@@ -371,22 +370,22 @@ iface vlan101
         // Check options
         assert!(swp54_iface
             .options
-            .contains(&("bridge-access".to_string(), "199".to_string())));
+            .contains(&InterfaceOption::BridgeAccess(199)));
         assert!(swp54_iface
             .options
-            .contains(&("mstpctl-bpduguard".to_string(), "yes".to_string())));
+            .contains(&InterfaceOption::MstpctlBpduguard(true)));
         assert!(swp54_iface
             .options
-            .contains(&("mstpctl-portadminedge".to_string(), "yes".to_string())));
+            .contains(&InterfaceOption::MstpctlPortadminedge(true)));
         assert!(swp54_iface
             .options
-            .contains(&("mtu".to_string(), "9216".to_string())));
+            .contains(&InterfaceOption::Mtu(9216)));
         assert!(swp54_iface
             .options
-            .contains(&("post-down".to_string(), "/some/script.sh".to_string())));
+            .contains(&InterfaceOption::PostDown("/some/script.sh".to_string())));
         assert!(swp54_iface
             .options
-            .contains(&("post-up".to_string(), "/some/script.sh".to_string())));
+            .contains(&InterfaceOption::PostUp("/some/script.sh".to_string())));
 
         // Check 'bridge' interface
         let bridge_iface = &interfaces["bridge"];
@@ -395,16 +394,29 @@ iface vlan101
         assert_eq!(bridge_iface.family, None);
         assert_eq!(bridge_iface.method, None);
         // Check options
-        assert!(bridge_iface.options.contains(&("bridge-ports".to_string(), "swp1 swp2 swp3 swp4 swp5 swp6 swp7 swp8 swp9 swp10 swp11 swp12 swp13 swp14 swp15 swp16 swp17 swp18 swp19 swp20 swp21 swp22 swp23 swp24 swp31 swp32 swp33 swp34 swp35 swp36 swp37 swp38 swp39 swp40 swp41 swp42 swp43 swp44 swp45 swp46 swp47 swp48 swp49 swp50 swp51 swp52 swp53 swp54".to_string())));
+        assert!(bridge_iface.options.contains(&InterfaceOption::BridgePorts(vec![
+            "swp1".to_string(), "swp2".to_string(), "swp3".to_string(), "swp4".to_string(),
+            "swp5".to_string(), "swp6".to_string(), "swp7".to_string(), "swp8".to_string(),
+            "swp9".to_string(), "swp10".to_string(), "swp11".to_string(), "swp12".to_string(),
+            "swp13".to_string(), "swp14".to_string(), "swp15".to_string(), "swp16".to_string(),
+            "swp17".to_string(), "swp18".to_string(), "swp19".to_string(), "swp20".to_string(),
+            "swp21".to_string(), "swp22".to_string(), "swp23".to_string(), "swp24".to_string(),
+            "swp31".to_string(), "swp32".to_string(), "swp33".to_string(), "swp34".to_string(),
+            "swp35".to_string(), "swp36".to_string(), "swp37".to_string(), "swp38".to_string(),
+            "swp39".to_string(), "swp40".to_string(), "swp41".to_string(), "swp42".to_string(),
+            "swp43".to_string(), "swp44".to_string(), "swp45".to_string(), "swp46".to_string(),
+            "swp47".to_string(), "swp48".to_string(), "swp49".to_string(), "swp50".to_string(),
+            "swp51".to_string(), "swp52".to_string(), "swp53".to_string(), "swp54".to_string(),
+        ])));
         assert!(bridge_iface
             .options
-            .contains(&("bridge-pvid".to_string(), "1".to_string())));
+            .contains(&InterfaceOption::BridgePvid(1)));
         assert!(bridge_iface
             .options
-            .contains(&("bridge-vids".to_string(), "100-154 199".to_string())));
+            .contains(&InterfaceOption::BridgeVids("100-154 199".to_string())));
         assert!(bridge_iface
             .options
-            .contains(&("bridge-vlan-aware".to_string(), "yes".to_string())));
+            .contains(&InterfaceOption::BridgeVlanAware(true)));
 
         // Check 'mgmt' interface
         let mgmt_iface = &interfaces["mgmt"];
@@ -415,13 +427,13 @@ iface vlan101
         // Check options
         assert!(mgmt_iface
             .options
-            .contains(&("address".to_string(), "127.0.0.1/8".to_string())));
+            .contains(&InterfaceOption::Address("127.0.0.1/8".to_string())));
         assert!(mgmt_iface
             .options
-            .contains(&("address".to_string(), "::1/128".to_string())));
+            .contains(&InterfaceOption::Address("::1/128".to_string())));
         assert!(mgmt_iface
             .options
-            .contains(&("vrf-table".to_string(), "auto".to_string())));
+            .contains(&InterfaceOption::VrfTable("auto".to_string())));
 
         // Check 'vlan101' interface
         let vlan101_iface = &interfaces["vlan101"];
@@ -432,16 +444,16 @@ iface vlan101
         // Check options
         assert!(vlan101_iface
             .options
-            .contains(&("mtu".to_string(), "9216".to_string())));
+            .contains(&InterfaceOption::Mtu(9216)));
         assert!(vlan101_iface
             .options
-            .contains(&("post-up".to_string(), "/some/script.sh".to_string())));
+            .contains(&InterfaceOption::PostUp("/some/script.sh".to_string())));
         assert!(vlan101_iface
             .options
-            .contains(&("vlan-id".to_string(), "101".to_string())));
+            .contains(&InterfaceOption::VlanId(101)));
         assert!(vlan101_iface
             .options
-            .contains(&("vlan-raw-device".to_string(), "bridge".to_string())));
+            .contains(&InterfaceOption::VlanRawDevice("bridge".to_string())));
 
         // Check print/display formatting
         // At the end of the test

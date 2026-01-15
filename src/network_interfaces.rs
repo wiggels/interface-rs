@@ -20,14 +20,14 @@ use std::time::SystemTime;
 ///
 /// ```rust
 /// use interface_rs::NetworkInterfaces;
-/// use interface_rs::interface::{Interface, Method};
+/// use interface_rs::interface::{Interface, InterfaceOption, Method};
 ///
 /// let mut net_ifaces = NetworkInterfaces::load("tests/interfaces").unwrap();
 ///
 /// // Modify an interface
 /// if let Some(iface) = net_ifaces.get_interface_mut("eth0") {
 ///     iface.method = Some(Method::Static);
-///     iface.options.push(("address".to_string(), "192.168.1.100".to_string()));
+///     iface.options.push(InterfaceOption::Address("192.168.1.100".to_string()));
 /// }
 ///
 /// // Save changes
@@ -183,7 +183,7 @@ impl NetworkInterfaces {
     pub fn get_existing_vni_vlan(&self, vni_id: u32) -> Option<u16> {
         let vni_name = format!("vni{}", vni_id);
         let interface = self.interfaces.get(&vni_name)?;
-        interface.get_option("bridge-access")?.parse().ok()
+        interface.get_option("bridge-access").and_then(|v| v.parse().ok())
     }
 
     /// Retrieves all port names that have a `bridge-access` option defined.

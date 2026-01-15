@@ -1,4 +1,4 @@
-use super::{Family, InterfaceBuilder, Mapping, Method};
+use super::{Family, InterfaceBuilder, InterfaceOption, Mapping, Method};
 use std::fmt;
 
 /// Represents a network interface configuration in an `interfaces(5)` file.
@@ -39,7 +39,7 @@ pub struct Interface {
     /// The method of configuration (e.g., `static`, `dhcp`).
     pub method: Option<Method>,
     /// A list of options specified under the `iface` stanza.
-    pub options: Vec<(String, String)>,
+    pub options: Vec<InterfaceOption>,
     /// Optional mapping configuration for the interface.
     pub mapping: Option<Mapping>,
 }
@@ -103,7 +103,7 @@ impl Interface {
     ///
     /// # Returns
     ///
-    /// `Some(&str)` if the option exists, `None` otherwise.
+    /// `Some(String)` if the option exists, `None` otherwise.
     ///
     /// # Examples
     ///
@@ -116,14 +116,14 @@ impl Interface {
     ///     .with_option("netmask", "255.255.255.0")
     ///     .build();
     ///
-    /// assert_eq!(iface.get_option("address"), Some("192.168.1.100"));
+    /// assert_eq!(iface.get_option("address"), Some("192.168.1.100".to_string()));
     /// assert_eq!(iface.get_option("gateway"), None);
     /// ```
-    pub fn get_option(&self, key: &str) -> Option<&str> {
+    pub fn get_option(&self, key: &str) -> Option<String> {
         self.options
             .iter()
-            .find(|(k, _)| k == key)
-            .map(|(_, v)| v.as_str())
+            .find(|opt| opt.name() == key)
+            .map(|opt| opt.value())
     }
 
     /// Returns all values for the given option key.
@@ -137,7 +137,7 @@ impl Interface {
     ///
     /// # Returns
     ///
-    /// A `Vec` of string slices containing all values for the key.
+    /// A `Vec` of strings containing all values for the key.
     ///
     /// # Examples
     ///
@@ -153,11 +153,11 @@ impl Interface {
     /// let addresses = iface.get_options("address");
     /// assert_eq!(addresses, vec!["192.168.1.100", "192.168.1.101"]);
     /// ```
-    pub fn get_options(&self, key: &str) -> Vec<&str> {
+    pub fn get_options(&self, key: &str) -> Vec<String> {
         self.options
             .iter()
-            .filter(|(k, _)| k == key)
-            .map(|(_, v)| v.as_str())
+            .filter(|opt| opt.name() == key)
+            .map(|opt| opt.value())
             .collect()
     }
 }
@@ -187,9 +187,9 @@ impl fmt::Display for Interface {
         writeln!(f)?;
         // Sort options before printing
         let mut sorted_options = self.options.clone();
-        sorted_options.sort_by(|a, b| a.0.cmp(&b.0));
-        for (option_name, option_value) in &sorted_options {
-            writeln!(f, "    {} {}", option_name, option_value)?;
+        sorted_options.sort_by(|a, b| a.name().cmp(b.name()));
+        for option in &sorted_options {
+            writeln!(f, "    {}", option)?;
         }
         Ok(())
     }

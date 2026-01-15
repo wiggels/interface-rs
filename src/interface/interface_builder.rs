@@ -1,4 +1,4 @@
-use super::{Family, Interface, Mapping, Method};
+use super::{Family, Interface, InterfaceOption, Mapping, Method};
 
 /// A builder for constructing [`Interface`] instances.
 ///
@@ -26,7 +26,7 @@ pub struct InterfaceBuilder {
     pub(crate) allow: Vec<String>,
     pub(crate) family: Option<Family>,
     pub(crate) method: Option<Method>,
-    pub(crate) options: Vec<(String, String)>,
+    pub(crate) options: Vec<InterfaceOption>,
     pub(crate) mapping: Option<Mapping>,
 }
 
@@ -128,7 +128,10 @@ impl InterfaceBuilder {
         self
     }
 
-    /// Adds an option to the interface.
+    /// Adds an option to the interface using string key-value pairs.
+    ///
+    /// This method parses the key and value into the appropriate [`InterfaceOption`]
+    /// variant automatically.
     ///
     /// # Arguments
     ///
@@ -143,7 +146,29 @@ impl InterfaceBuilder {
     ///     .with_option("address", "192.168.1.100");
     /// ```
     pub fn with_option(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
-        self.options.push((key.into(), value.into()));
+        let key = key.into();
+        let value = value.into();
+        self.options.push(InterfaceOption::from_key_value(&key, &value));
+        self
+    }
+
+    /// Adds a typed option to the interface.
+    ///
+    /// # Arguments
+    ///
+    /// * `option` - The [`InterfaceOption`] to add.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use interface_rs::interface::{Interface, InterfaceOption};
+    ///
+    /// let builder = Interface::builder("eth0")
+    ///     .with_typed_option(InterfaceOption::Mtu(1500))
+    ///     .with_typed_option(InterfaceOption::Address("192.168.1.100".to_string()));
+    /// ```
+    pub fn with_typed_option(mut self, option: InterfaceOption) -> Self {
+        self.options.push(option);
         self
     }
 
@@ -172,8 +197,7 @@ impl InterfaceBuilder {
 
     /// Removes all options with the specified key from the interface configuration.
     ///
-    /// This method removes all key-value pairs in the options where the key matches
-    /// the specified `key`.
+    /// This method removes all options where the name matches the specified `key`.
     ///
     /// # Arguments
     ///
@@ -196,14 +220,14 @@ impl InterfaceBuilder {
     /// // The builder no longer contains any "address" options.
     /// ```
     pub fn remove_option(mut self, key: &str) -> Self {
-        self.options.retain(|(k, _)| k != key);
+        self.options.retain(|opt| opt.name() != key);
         self
     }
 
     /// Removes a specific option by its key and value from the interface configuration.
     ///
-    /// This method removes only the key-value pair in the options where both the key
-    /// matches the specified `key` and the value matches the specified `value`.
+    /// This method removes only the option where both the name matches the specified
+    /// `key` and the value matches the specified `value`.
     ///
     /// # Arguments
     ///
@@ -212,7 +236,7 @@ impl InterfaceBuilder {
     ///
     /// # Returns
     ///
-    /// Returns the builder instance with the specified key-value pair removed,
+    /// Returns the builder instance with the specified option removed,
     /// allowing further chained method calls.
     ///
     /// # Examples
@@ -228,7 +252,7 @@ impl InterfaceBuilder {
     /// // but the pair ("address", "192.168.1.100") is removed.
     /// ```
     pub fn remove_option_value(mut self, key: &str, value: &str) -> Self {
-        self.options.retain(|(k, v)| !(k == key && v == value));
+        self.options.retain(|opt| !(opt.name() == key && opt.value() == value));
         self
     }
 
@@ -277,7 +301,7 @@ mod tests {
         assert_eq!(iface.options.len(), 1);
         assert_eq!(
             iface.options[0],
-            ("netmask".to_string(), "255.255.255.0".to_string())
+            InterfaceOption::Netmask("255.255.255.0".to_string())
         );
     }
 
@@ -294,12 +318,24 @@ mod tests {
         assert_eq!(iface.options.len(), 3);
         assert!(iface
             .options
-            .contains(&("netmask".to_string(), "255.255.255.0".to_string())));
+            .contains(&InterfaceOption::Netmask("255.255.255.0".to_string())));
         assert!(iface
             .options
-            .contains(&("address".to_string(), "192.168.1.51".to_string())));
+            .contains(&InterfaceOption::Address("192.168.1.51".to_string())));
         assert!(iface
             .options
-            .contains(&("address".to_string(), "192.168.1.52".to_string())));
+            .contains(&InterfaceOption::Address("192.168.1.52".to_string())));
+    }
+
+    #[test]
+    fn test_with_typed_option() {
+        let iface = Interface::builder("eth0")
+            .with_typed_option(InterfaceOption::Mtu(1500))
+            .with_typed_option(InterfaceOption::BridgeVlanAware(true))
+            .build();
+
+        assert_eq!(iface.options.len(), 2);
+        assert!(iface.options.contains(&InterfaceOption::Mtu(1500)));
+        assert!(iface.options.contains(&InterfaceOption::BridgeVlanAware(true)));
     }
 }

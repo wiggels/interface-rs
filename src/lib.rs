@@ -105,5 +105,5 @@ pub mod helper;
 mod parser;
 
 pub use error::NetworkInterfacesError;
-pub use interface::{Family, Interface, InterfaceBuilder, Mapping, Method};
+pub use interface::{Family, Interface, InterfaceBuilder, InterfaceOption, Mapping, Method};
 pub use network_interfaces::NetworkInterfaces;
