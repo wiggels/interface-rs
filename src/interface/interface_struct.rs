@@ -26,7 +26,7 @@ use std::fmt;
 ///     .with_option("mtu", "1500")
 ///     .build();
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Interface {
     /// The name of the interface (e.g., `"eth0"`).
     pub name: String,

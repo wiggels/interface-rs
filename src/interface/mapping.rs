@@ -18,7 +18,7 @@ use std::path::PathBuf;
 ///     maps: vec!["eth0".to_string(), "eth1".to_string()],
 /// };
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Mapping {
     /// The script to be used for mapping.
     pub script: PathBuf,
