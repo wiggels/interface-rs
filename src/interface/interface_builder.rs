@@ -157,8 +157,9 @@ impl InterfaceBuilder {
     ///
     /// ```rust
     /// use interface_rs::interface::{Interface, Mapping};
+    /// use std::path::PathBuf;
     /// let mapping = Mapping {
-    ///     script: "/usr/local/bin/map-script".to_string(),
+    ///     script: PathBuf::from("/usr/local/bin/map-script"),
     ///     maps: vec!["eth0".to_string()],
     /// };
     /// let builder = Interface::builder("eth0")

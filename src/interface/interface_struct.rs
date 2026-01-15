@@ -106,7 +106,7 @@ impl fmt::Display for Interface {
         }
         if let Some(mapping) = &self.mapping {
             writeln!(f, "mapping {}", self.name)?;
-            writeln!(f, "    script {}", mapping.script)?;
+            writeln!(f, "    script {}", mapping.script.display())?;
             for map in &mapping.maps {
                 writeln!(f, "    map {}", map)?;
             }
