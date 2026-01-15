@@ -36,7 +36,7 @@ This library provides structs and functions to load, parse, modify, and save net
 - **Save** changes back to the file system.
 - **Fluent API** using the builder pattern for creating and modifying interfaces.
 - **Display** interfaces in the correct `interfaces(5)` file format.
-- **Type-safe** enums for address families (`Family`) and configuration methods (`Method`).
+- **Type-safe** enums for address families (`Family`), configuration methods (`Method`), and interface options (`InterfaceOption`).
 
 ---
 
@@ -102,19 +102,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ```rust
 use interface_rs::NetworkInterfaces;
-use interface_rs::interface::{Interface, Family, Method};
+use interface_rs::interface::{Interface, Family, Method, InterfaceOption};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut net_ifaces = NetworkInterfaces::load("/etc/network/interfaces")?;
 
-    // Create a new interface using the builder pattern
+    // Create a new interface using the builder pattern with typed options
     let new_iface = Interface::builder("swp1")
         .with_auto(true)
         .with_allow("hotplug")
         .with_family(Family::Inet)
         .with_method(Method::Static)
-        .with_option("address", "192.168.100.1")
-        .with_option("netmask", "255.255.255.0")
+        .with_typed_option(InterfaceOption::Address("192.168.100.1".to_string()))
+        .with_typed_option(InterfaceOption::Netmask("255.255.255.0".to_string()))
         .build();
 
     // Add the new interface to the collection
@@ -131,7 +131,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ```rust
 use interface_rs::NetworkInterfaces;
-use interface_rs::interface::{Interface, Family, Method};
+use interface_rs::interface::{Interface, Family, Method, InterfaceOption};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut net_ifaces = NetworkInterfaces::load("/etc/network/interfaces")?;
@@ -140,8 +140,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if let Some(iface) = net_ifaces.get_interface("eth0") {
         let modified_iface = iface.edit()
             .with_method(Method::Static)
-            .with_option("address", "192.168.1.50")
-            .with_option("netmask", "255.255.255.0")
+            .with_typed_option(InterfaceOption::Address("192.168.1.50".to_string()))
+            .with_typed_option(InterfaceOption::Netmask("255.255.255.0".to_string()))
             .build();
 
         // Replace the existing interface with the modified one
@@ -218,6 +218,22 @@ Common methods are provided as enum variants for type safety:
 - `Method::Loopback` - Loopback interface
 - `Method::Manual` - Manual configuration
 - `Method::Other(String)` - Any other method (e.g., `ppp`, `tunnel`, `bootp`)
+
+### Interface Options
+
+The `InterfaceOption` enum provides strongly-typed variants for common interface options:
+
+- `InterfaceOption::Address(String)` - IP address
+- `InterfaceOption::Netmask(String)` - Network mask
+- `InterfaceOption::Gateway(String)` - Default gateway
+- `InterfaceOption::Mtu(u16)` - Maximum Transmission Unit
+- `InterfaceOption::BridgePorts(Vec<String>)` - Bridge member ports
+- `InterfaceOption::BridgeVlanAware(bool)` - VLAN-aware bridge setting
+- `InterfaceOption::VlanId(u16)` - VLAN ID
+- `InterfaceOption::Vrf(String)` - VRF name
+- `InterfaceOption::PostUp(String)` - Post-up script
+- `InterfaceOption::PreDown(String)` - Pre-down script
+- `InterfaceOption::Other(String, String)` - Any other option as key-value pair
 
 ---
 
