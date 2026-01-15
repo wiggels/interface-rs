@@ -10,6 +10,12 @@ pub struct Parser;
 
 type ParseResult = Result<(HashMap<String, Interface>, Vec<String>, Vec<String>), ParserError>;
 
+impl Default for Parser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Parser {
     /// Creates a new `Parser` instance.
     pub fn new() -> Self {
@@ -28,12 +34,11 @@ impl Parser {
     /// or a `ParserError` if parsing fails.
     pub fn parse(&self, content: &str) -> ParseResult {
         let mut interfaces = HashMap::new();
-        let lines = content.lines().enumerate().peekable();
         let mut current_interface: Option<Interface> = None;
         let mut comments = Vec::new();
         let mut sources = Vec::new();
 
-        for (line_number, line) in lines {
+        for (line_number, line) in content.lines().enumerate() {
             let line = line.trim();
 
             // Collect comments at the top

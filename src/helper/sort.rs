@@ -17,11 +17,11 @@ pub fn natural(a: &str, b: &str) -> Ordering {
     loop {
         match (a_iter.peek(), b_iter.peek()) {
             (Some(a_c), Some(b_c)) => {
-                if a_c.is_digit(10) && b_c.is_digit(10) {
+                if a_c.is_ascii_digit() && b_c.is_ascii_digit() {
                     // Extract full numbers
                     let mut a_num = String::new();
                     while let Some(c) = a_iter.peek() {
-                        if c.is_digit(10) {
+                        if c.is_ascii_digit() {
                             a_num.push(*c);
                             a_iter.next();
                         } else {
@@ -31,7 +31,7 @@ pub fn natural(a: &str, b: &str) -> Ordering {
 
                     let mut b_num = String::new();
                     while let Some(c) = b_iter.peek() {
-                        if c.is_digit(10) {
+                        if c.is_ascii_digit() {
                             b_num.push(*c);
                             b_iter.next();
                         } else {
@@ -39,8 +39,9 @@ pub fn natural(a: &str, b: &str) -> Ordering {
                         }
                     }
 
-                    let a_int = a_num.parse::<u64>().unwrap();
-                    let b_int = b_num.parse::<u64>().unwrap();
+                    // Safe to unwrap: we only collected digit characters above
+                    let a_int = a_num.parse::<u64>().expect("a_num contains only digits");
+                    let b_int = b_num.parse::<u64>().expect("b_num contains only digits");
 
                     match a_int.cmp(&b_int) {
                         Ordering::Equal => continue,
